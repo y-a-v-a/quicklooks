@@ -3,8 +3,9 @@
 # Builds DevQuickLook.app with two Quick Look preview extensions embedded and
 # installs it into ~/Applications:
 #
-#   YAMLPreviewer.appex   public.yaml              .yaml .yml
-#   JSONLPreviewer.appex  nl.vincentbruijn.jsonl   .jsonl .ndjson
+#   YAMLPreviewer.appex   public.yaml                          .yaml .yml
+#   INIPreviewer.appex    com.microsoft.ini, public.toml       .ini .cfg .config .toml
+#   JSONLPreviewer.appex  nl.vincentbruijn.jsonl               .jsonl .ndjson
 #
 # No Xcode project: an app extension is a bundle with an Info.plist and a
 # binary, and swiftc produces both. The only non-obvious part is the entry
@@ -26,9 +27,10 @@ DEST="$HOME/Applications/${APP_NAME}.app"
 LEGACY="$HOME/Applications/JSONLPreview.app"   # pre-YAML layout
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
-# name : bundle-id-suffix : UTI : sources
+# name : bundle-id-suffix : comma-separated UTIs : sources
 EXTENSIONS=(
   "YAMLPreviewer:yaml:public.yaml:YAMLRenderer.swift YAMLPreviewViewController.swift"
+  "INIPreviewer:ini:com.microsoft.ini,public.toml:INIRenderer.swift INIPreviewViewController.swift"
   "JSONLPreviewer:jsonl:nl.vincentbruijn.jsonl:JSONLRenderer.swift JSONLPreviewViewController.swift"
 )
 SHARED="PreviewStyle.swift TextPreviewController.swift"
@@ -67,9 +69,14 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/PlugIns"
 # --------------------------------------------------------------- extensions --
 
 for spec in "${EXTENSIONS[@]}"; do
-  IFS=":" read -r EXT_NAME SUFFIX UTI SOURCES <<< "$spec"
+  IFS=":" read -r EXT_NAME SUFFIX UTIS SOURCES <<< "$spec"
   APPEX="$APP/Contents/PlugIns/${EXT_NAME}.appex"
   mkdir -p "$APPEX/Contents/MacOS"
+
+  UTI_XML=""
+  while IFS= read -r uti; do
+    UTI_XML="${UTI_XML}                <string>${uti}</string>"$'\n'
+  done < <(tr ',' '\n' <<< "$UTIS")
 
   # shellcheck disable=SC2086
   swiftc \
@@ -106,8 +113,7 @@ for spec in "${EXTENSIONS[@]}"; do
         <dict>
             <key>QLSupportedContentTypes</key>
             <array>
-                <string>${UTI}</string>
-            </array>
+${UTI_XML}            </array>
             <key>QLSupportsSearchableItems</key>
             <false/>
         </dict>
