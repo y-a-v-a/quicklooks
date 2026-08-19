@@ -32,62 +32,57 @@ declares the JSONL type.
 
 ## Part 2 — JSONL Quick Look extension
 
-### Create the project
-
-1. Xcode → new macOS **App**, Swift, name `JSONLPreview`, bundle id
-   `nl.vincentbruijn.jsonlpreview`. The app itself does nothing; it is a host
-   for the extension.
-2. File → New → Target → macOS → **Quick Look Preview Extension**, name
-   `JSONLPreviewer`. Let Xcode embed it in the host app.
-3. Delete the generated `PreviewViewController.xib` and replace the generated
-   `PreviewViewController.swift`. Drop both files from this directory into the
-   extension target.
-
-### Extension Info.plist
-
-```xml
-<key>NSExtension</key>
-<dict>
-    <key>NSExtensionAttributes</key>
-    <dict>
-        <key>QLSupportedContentTypes</key>
-        <array>
-            <string>nl.vincentbruijn.jsonl</string>
-        </array>
-        <key>QLSupportsSearchableItems</key>
-        <false/>
-    </dict>
-    <key>NSExtensionPointIdentifier</key>
-    <string>com.apple.quicklook.preview</string>
-    <key>NSExtensionPrincipalClass</key>
-    <string>$(PRODUCT_MODULE_NAME).PreviewViewController</string>
-</dict>
-```
-
-Remove any `NSExtensionMainStoryboard` / nib key the template added — the
-controller builds its view in `loadView()`.
-
-### Host app Info.plist
-
-Copy the `UTImportedTypeDeclarations` array for `nl.vincentbruijn.jsonl` out of
-`install-dev-utis.sh` into the **host app's** Info.plist. The extension can only
-claim a type that something on the system declares. Then run Part 1 again with
-`--no-jsonl` so the stub only owns YAML.
-
-### Install
-
-Signing "Sign to Run Locally" (ad-hoc) is fine. App Sandbox stays on with the
-template defaults — Quick Look hands the extension a sandbox extension for the
-file it asks you to preview, so no extra entitlement is needed.
+A real previewer that pretty-prints and colors each record. It replaces the
+plain-text preview from Part 1 for `.jsonl`/`.ndjson` only.
 
 ```sh
-cp -R ~/Library/Developer/Xcode/DerivedData/JSONLPreview-*/Build/Products/Debug/JSONLPreview.app /Applications/
-open /Applications/JSONLPreview.app   # run once to register, then quit
-qlmanage -r && qlmanage -r cache
+./build-jsonl-preview.sh          # build + install to ~/Applications
+./install-dev-utis.sh --no-jsonl  # hand .jsonl over to the extension
+open ~/Applications/JSONLPreview.app   # run once to register, then quit
 ```
+
+Uninstall: `./build-jsonl-preview.sh --uninstall`
+
+### What gets built
+
+No Xcode project. An app extension is a bundle with an `Info.plist` and a
+binary, and `swiftc` produces both:
+
+```
+~/Applications/JSONLPreview.app
+  Contents/Info.plist                    UTImportedTypeDeclarations for jsonl
+  Contents/MacOS/JSONLPreview            host app, does nothing
+  Contents/PlugIns/JSONLPreviewer.appex  the previewer
+```
+
+- `JSONLPreviewApp.swift` is the host. An app extension has to ship inside an
+  app, and a UTI has to be declared by something LaunchServices knows about;
+  the host exists for those two reasons only.
+- `PreviewViewController.swift` builds its view in `loadView()`, so there is no
+  nib and no `NSExtensionMainStoryboard` key.
+- The appex links with `-e _NSExtensionMain` instead of the usual `main` — the
+  one thing about extensions that is not just plist wiring.
+- Both bundles are ad-hoc signed with App Sandbox on. Quick Look hands the
+  extension a sandbox extension for the file being previewed, so read access to
+  that file needs no entitlement of its own.
+- The host declares `nl.vincentbruijn.jsonl` itself, duplicating the block in
+  `install-dev-utis.sh`. Run the stub with `--no-jsonl` so exactly one bundle
+  owns the type; two declarations make which previewer wins a coin toss.
+
+`~/Applications` throughout, so no sudo and no `/Applications` clutter.
+LaunchServices scans it and Quick Look loads extensions from there fine.
 
 Check it appears under System Settings → General → Login Items & Extensions →
 Quick Look.
+
+### Building it in Xcode instead
+
+If you would rather have a project: new macOS **App** named `JSONLPreview`,
+bundle id `nl.vincentbruijn.jsonlpreview`, then File → New → Target → macOS →
+**Quick Look Preview Extension** named `JSONLPreviewer`. Delete the generated
+`PreviewViewController.xib`, drop in `PreviewViewController.swift` and
+`JSONLRenderer.swift`, and copy the two `Info.plist` bodies out of
+`build-jsonl-preview.sh`. Sign to Run Locally is fine.
 
 ## Renderer behavior
 
@@ -104,6 +99,7 @@ Tune `maxBytes` / `maxRecords` in `JSONLRenderer.render`.
 
 ```sh
 qlmanage -m plugins                 # what is registered
+pluginkit -m -p com.apple.quicklook.preview -v | grep jsonl
 qlmanage -p some.jsonl              # preview in a window, stderr visible
 mdls -name kMDItemContentType f     # confirm the UTI resolved
 log stream --predicate 'process == "quicklookd" OR process == "QuickLookUIService"'
