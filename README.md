@@ -1,7 +1,14 @@
-# Quick Look for YAML and JSONL on macOS
+# Quick Look for config formats on macOS
 
-Space-bar previews for `.yaml`/`.yml` and `.jsonl`/`.ndjson`, syntax coloured,
-in `~/Applications` — no sudo, no `/Applications` clutter.
+Space-bar previews, syntax coloured, in `~/Applications` — no sudo, no
+`/Applications` clutter.
+
+| Extensions | Type | Previewer |
+| --- | --- | --- |
+| `.yaml` `.yml` | `public.yaml` | `YAMLPreviewer` |
+| `.ini` | `com.microsoft.ini` | `INIPreviewer` |
+| `.cfg` `.config` `.toml` | `public.toml` | `INIPreviewer` |
+| `.jsonl` `.ndjson` | `nl.vincentbruijn.jsonl` | `JSONLPreviewer` |
 
 ```sh
 ./build-quicklooks.sh
@@ -34,28 +41,37 @@ Deliberate choices:
 
 Uninstall: `./install-dev-utis.sh --uninstall`
 
-### Why this does not work for YAML
+### Why this only works for JSONL
 
-The JSONL half works: nothing else declares that type, so the declaration
-lands and the text previewer picks the file up.
+The JSONL half works: nothing else declares that type, so the declaration lands
+and the text previewer picks the file up.
 
-The YAML half is inert. macOS declares `public.yaml` itself, in
-`/System/Library/CoreServices/CoreTypes.bundle`, and a *declared* type beats an
-*imported* one — the import is ignored. Apple's declaration conforms to
-`public.text`, and the built-in text previewer binds `public.plain-text`, which
-`public.yaml` does not conform to. So `.yaml` resolves to a perfectly good UTI
-that no previewer claims, and you get nothing. Confirm with:
+The YAML half is inert, and the same trick would fail for INI and TOML. macOS
+already declares those types itself, in
+`/System/Library/CoreServices/CoreTypes.bundle` and elsewhere, and a *declared*
+type beats an *imported* one — the import is ignored. Worse, every one of those
+declarations conforms to `public.text`, while the built-in text previewer binds
+`public.plain-text`:
 
 ```sh
 mdls -name kMDItemContentTypeTree some.yaml   # public.text, no public.plain-text
 ```
 
-There is no fix at the UTI layer: you cannot restate the conformance of a type
-you do not own. A preview extension names the type it handles directly, so
-conformance stops mattering — which is Part 2.
+| Extension | Resolves to | Conforms to | Previewed? |
+| --- | --- | --- | --- |
+| `.yaml` `.yml` | `public.yaml` | `public.text` | no |
+| `.ini` | `com.microsoft.ini` | `public.text` | no |
+| `.cfg` `.config` `.toml` | `public.toml` | `public.text` | no |
+| `.jsonl` `.ndjson` | undeclared, so ours lands | `public.plain-text` | yes, as text |
 
-(Checked on macOS 26.5. If you are on a release old enough that nothing
-declares `public.yaml`, the Part 1 import would work and give you plain text.)
+So these files resolve to perfectly good UTIs that no previewer claims, and you
+get nothing. There is no fix at the UTI layer: you cannot restate the
+conformance of a type you do not own. A preview extension names the type it
+handles directly, so conformance stops mattering — which is Part 2.
+
+(Checked on macOS 26.5. `.conf` and `.properties` are still undeclared and
+resolve to `dyn.*`; if you want those, declare a UTI for them the way
+`install-dev-utis.sh` does for JSONL, and add it to the INI previewer.)
 
 ## Part 2 — the preview extensions
 
@@ -80,6 +96,7 @@ binary, and `swiftc` produces both:
   Contents/Info.plist                    UTImportedTypeDeclarations for jsonl
   Contents/MacOS/DevQuickLook            host app, does nothing
   Contents/PlugIns/YAMLPreviewer.appex   claims public.yaml
+  Contents/PlugIns/INIPreviewer.appex    claims com.microsoft.ini, public.toml
   Contents/PlugIns/JSONLPreviewer.appex  claims nl.vincentbruijn.jsonl
 ```
 
@@ -89,8 +106,10 @@ binary, and `swiftc` produces both:
 - Each appex declares its type in `QLSupportedContentTypes` and gets it — an
   extension claims a type by name, so `public.yaml` not conforming to
   `public.plain-text` is no longer an obstacle.
-- Only JSONL needs `UTImportedTypeDeclarations` in the host. `public.yaml` is
-  already a system type; declaring it again would be ignored anyway.
+- Only JSONL needs `UTImportedTypeDeclarations` in the host. The others are
+  already system types; declaring them again would be ignored anyway.
+- One appex can claim several types, which is how `.ini` and `.toml` share a
+  previewer.
 - `TextPreviewController` builds its view in `loadView()`, so there is no nib
   and no `NSExtensionMainStoryboard` key.
 - The appex links with `-e _NSExtensionMain` instead of the usual `main` — the
@@ -147,6 +166,37 @@ Handled, because each one looks like a key or a comment and is not:
 - An unterminated quote colours to end of line instead of running away.
 
 Reads at most 4 MB and 5000 lines. Tune in `YAMLRenderer.render`.
+
+### INI and TOML — `INIRenderer.swift`
+
+Also highlights rather than parses, and keeps the file's layout, for the same
+reasons. One lexer covers both, because `[section]` / `key = value` / comment
+lines are the same shape either way.
+
+They differ in one place that changes colouring, so the dialect comes from the
+extension rather than a sniff:
+
+- Windows INI has **no inline comments**. In `path = C:\tmp ; note` the value
+  really is `C:\tmp ; note`, and `php.ini` is full of lines like that. TOML
+  ends the value at the `#`.
+- Only `.toml` gets TOML rules. `.cfg` and `.config` resolve to `public.toml`
+  on macOS but in practice hold configparser-style INI. Being wrong in the INI
+  direction only under-colours a comment; being wrong the other way eats half a
+  value.
+
+Handled:
+
+- `[section]` and TOML `[[array of tables]]`, anchored on the *first* `]` so a
+  trailing `# note ]` does not swallow the line.
+- `key = value` and configparser's `key: value`, where the colon has to be
+  followed by whitespace — otherwise `C:\Users` and `http://host` would split.
+- TOML numbers in full: `1_000_000`, `0xDEADBEEF`, `0o755`, `0b1101`, `-17`,
+  and datetimes like `1979-05-27T07:32:00Z`.
+- `"""` and `'''` strings, whose lines stay literal even when they contain `foo:`
+  or `#`. Single-quoted strings are literal in TOML, so only `"` takes escapes.
+- Arrays, inline tables, and the keys inside them: `{ ip = "10.0.0.1" }`.
+
+Reads at most 4 MB and 5000 lines. Tune in `INIRenderer.render`.
 
 ## Debugging
 
