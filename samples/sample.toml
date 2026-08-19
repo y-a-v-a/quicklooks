@@ -1,0 +1,33 @@
+# TOML torture
+title = "config"        # inline comment, ends the value here
+
+[owner]
+name = "Vincent"
+dob = 1979-05-27T07:32:00Z
+age = 46
+big = 1_000_000
+hex = 0xDEADBEEF
+oct = 0o755
+bin = 0b1101
+ratio = 3.14
+neg = -17
+active = true
+path = 'C:\literal\no\escapes'
+escaped = "a \" quote # not a comment"
+
+[servers]
+ports = [8001, 8002, 8003]
+inline = { ip = "10.0.0.1", dc = "eqdc10" }
+
+[[products]]
+name = "Hammer"
+
+[[products]]
+name = "Nail"
+
+[text]
+block = """
+multi-line: not a key
+# not a comment
+"""
+after = "back to normal"

@@ -1,0 +1,5 @@
+{"ts":"2026-08-19T08:00:00Z","level":"info","msg":"server started","port":8080,"tls":true}
+{"ts":"2026-08-19T08:00:03Z","level":"warn","msg":"slow query","ms":812,"tags":["db","pg"],"trace":null}
+{"level":"error","msg":"unhandled","err":{"code":500,"detail":"nil map","stack":["a.go:12","b.go:44"]}}
+this line is not json at all
+{"nested":{"a":{"b":{"c":[1,2,3.5,-4]}}},"unicode":"héllo \"quoted\"\ttab","empty_obj":{},"empty_arr":[]}

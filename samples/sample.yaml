@@ -1,0 +1,38 @@
+%YAML 1.2
+---
+# a leading comment
+name: quicklooks          # trailing comment
+url: https://example.com/a:b
+port: 8080
+ratio: 3.14
+hex: 0x1F
+enabled: true
+missing: null
+tilde: ~
+version: "1.0"            # quoted, stays a string
+apostrophe: 'it''s fine'
+hash_in_string: "value # not a comment"
+anchor: &base
+  retries: 3
+merged:
+  <<: *base
+  timeout: 30
+flow_map: {a: 1, b: two, c: [x, y]}
+flow_seq: [1, 2, "three"]
+empty_value:
+list:
+  - one
+  - key: nested
+    other: 2
+  - - deep
+    - deeper
+script: |
+  #!/bin/sh
+  echo "not: a key"   # not a comment either
+  exit 0
+folded: >-
+  wrapped text
+  more text
+after_block: back-to-normal
+unterminated: "oops
+...
