@@ -152,7 +152,7 @@ Reads at most 4 MB and 5000 lines. Tune in `YAMLRenderer.render`.
 
 ```sh
 qlmanage -m plugins                 # what is registered
-pluginkit -m -p com.apple.quicklook.preview -v | grep jsonl
+pluginkit -m -p com.apple.quicklook.preview -v | grep devquicklook
 qlmanage -p some.yaml               # preview in a window, stderr visible
 mdls -name kMDItemContentType f     # confirm the UTI resolved
 log stream --predicate 'process == "quicklookd" OR process == "QuickLookUIService"'
