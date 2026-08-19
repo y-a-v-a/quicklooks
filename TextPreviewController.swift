@@ -1,11 +1,21 @@
 import Cocoa
 import Quartz
 
+/// Scrolling monospace text view, shared by the previewers. Subclasses only
+/// have to say how a file turns into an attributed string.
+///
+/// The view is built in `loadView()`, so no nib and no NSExtensionMainStoryboard
+/// key in the extension's Info.plist.
 @MainActor
-final class PreviewViewController: NSViewController, QLPreviewingController {
+class TextPreviewController: NSViewController, QLPreviewingController {
 
     private let textView = NSTextView()
     private let scrollView = NSScrollView()
+
+    /// Override. Runs off whatever thread Quick Look calls us on.
+    class func render(url: URL) throws -> NSAttributedString {
+        fatalError("subclass must override render(url:)")
+    }
 
     override func loadView() {
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 820, height: 620))
@@ -36,7 +46,7 @@ final class PreviewViewController: NSViewController, QLPreviewingController {
     }
 
     func preparePreviewOfFile(at url: URL) async throws {
-        let rendered = try JSONLRenderer.render(url: url)
+        let rendered = try Self.render(url: url)
         textView.textStorage?.setAttributedString(rendered)
         textView.scroll(.zero)
     }

@@ -2,16 +2,6 @@ import AppKit
 
 enum JSONLRenderer {
 
-    enum Style {
-        static let mono = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
-        static let key = NSColor.systemBlue
-        static let string = NSColor.systemRed
-        static let number = NSColor.systemPurple
-        static let literal = NSColor.systemOrange
-        static let punct = NSColor.secondaryLabelColor
-        static let dim = NSColor.tertiaryLabelColor
-        static let error = NSColor.systemRed
-    }
 
     /// Reads at most `maxBytes` and renders at most `maxRecords` records.
     /// Both caps matter: quicklookd kills previews that take too long.
@@ -37,29 +27,29 @@ enum JSONLRenderer {
             if records >= maxRecords { truncated = true; break }
             records += 1
 
-            body.t("\u{2500}\u{2500} \(lineNo) ", Style.dim)
-            body.t(String(repeating: "\u{2500}", count: 24) + "\n", Style.dim)
+            body.t("\u{2500}\u{2500} \(lineNo) ", PreviewStyle.dim)
+            body.t(String(repeating: "\u{2500}", count: 24) + "\n", PreviewStyle.dim)
 
             if let object = try? JSONSerialization.jsonObject(with: Data(line), options: [.fragmentsAllowed]) {
                 append(object, body, 0)
             } else {
-                body.t("invalid JSON: ", Style.error)
-                body.t(String(decoding: line.prefix(400), as: UTF8.self), Style.dim)
+                body.t("invalid JSON: ", PreviewStyle.error)
+                body.t(String(decoding: line.prefix(400), as: UTF8.self), PreviewStyle.dim)
             }
-            body.t("\n\n", Style.punct)
+            body.t("\n\n", PreviewStyle.punct)
         }
 
         let header = NSMutableAttributedString()
-        header.t(url.lastPathComponent, Style.punct)
-        header.t("  \u{2022}  \(records) record\(records == 1 ? "" : "s")", Style.dim)
+        header.t(url.lastPathComponent, PreviewStyle.punct)
+        header.t("  \u{2022}  \(records) record\(records == 1 ? "" : "s")", PreviewStyle.dim)
         if let totalBytes {
-            header.t("  \u{2022}  \(ByteCountFormatter.string(fromByteCount: Int64(totalBytes), countStyle: .file))", Style.dim)
+            header.t("  \u{2022}  \(ByteCountFormatter.string(fromByteCount: Int64(totalBytes), countStyle: .file))", PreviewStyle.dim)
         }
-        header.t(truncated ? "  \u{2022}  truncated\n\n" : "\n\n", Style.dim)
+        header.t(truncated ? "  \u{2022}  truncated\n\n" : "\n\n", PreviewStyle.dim)
 
         header.append(body)
         if truncated {
-            header.t("\u{2026} remainder not shown\n", Style.dim)
+            header.t("\u{2026} remainder not shown\n", PreviewStyle.dim)
         }
         return header
     }
@@ -70,43 +60,43 @@ enum JSONLRenderer {
 
         switch value {
         case let dict as [String: Any]:
-            guard !dict.isEmpty else { out.t("{}", Style.punct); return }
-            out.t("{\n", Style.punct)
+            guard !dict.isEmpty else { out.t("{}", PreviewStyle.punct); return }
+            out.t("{\n", PreviewStyle.punct)
             let keys = dict.keys.sorted()
             for (i, k) in keys.enumerated() {
-                out.t(pad, Style.punct)
-                out.t(quoted(k), Style.key)
-                out.t(": ", Style.punct)
+                out.t(pad, PreviewStyle.punct)
+                out.t(quoted(k), PreviewStyle.key)
+                out.t(": ", PreviewStyle.punct)
                 append(dict[k] as Any, out, depth + 1)
-                out.t(i == keys.count - 1 ? "\n" : ",\n", Style.punct)
+                out.t(i == keys.count - 1 ? "\n" : ",\n", PreviewStyle.punct)
             }
-            out.t(close + "}", Style.punct)
+            out.t(close + "}", PreviewStyle.punct)
 
         case let array as [Any]:
-            guard !array.isEmpty else { out.t("[]", Style.punct); return }
-            out.t("[\n", Style.punct)
+            guard !array.isEmpty else { out.t("[]", PreviewStyle.punct); return }
+            out.t("[\n", PreviewStyle.punct)
             for (i, v) in array.enumerated() {
-                out.t(pad, Style.punct)
+                out.t(pad, PreviewStyle.punct)
                 append(v, out, depth + 1)
-                out.t(i == array.count - 1 ? "\n" : ",\n", Style.punct)
+                out.t(i == array.count - 1 ? "\n" : ",\n", PreviewStyle.punct)
             }
-            out.t(close + "]", Style.punct)
+            out.t(close + "]", PreviewStyle.punct)
 
         case let s as String:
-            out.t(quoted(s), Style.string)
+            out.t(quoted(s), PreviewStyle.string)
 
         case let n as NSNumber:
             if CFGetTypeID(n) == CFBooleanGetTypeID() {
-                out.t(n.boolValue ? "true" : "false", Style.literal)
+                out.t(n.boolValue ? "true" : "false", PreviewStyle.literal)
             } else {
-                out.t(n.stringValue, Style.number)
+                out.t(n.stringValue, PreviewStyle.number)
             }
 
         case is NSNull:
-            out.t("null", Style.literal)
+            out.t("null", PreviewStyle.literal)
 
         default:
-            out.t("\(value)", Style.dim)
+            out.t("\(value)", PreviewStyle.dim)
         }
     }
 
@@ -123,14 +113,5 @@ enum JSONLRenderer {
             }
         }
         return out + "\""
-    }
-}
-
-extension NSMutableAttributedString {
-    func t(_ s: String, _ color: NSColor) {
-        append(NSAttributedString(string: s, attributes: [
-            .font: JSONLRenderer.Style.mono,
-            .foregroundColor: color
-        ]))
     }
 }

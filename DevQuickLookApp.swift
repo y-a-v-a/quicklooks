@@ -1,5 +1,5 @@
 //
-// Host app for the JSONLPreviewer Quick Look extension.
+// Host app for the Quick Look preview extensions.
 //
 // It does nothing except exist: an app extension has to ship inside an app, and
 // the UTI for .jsonl has to be declared by something the system knows about.
@@ -13,11 +13,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let text = NSTextField(wrappingLabelWithString: """
-            JSONL Quick Look is installed.
+            Quick Look previewers installed.
 
-            Select a .jsonl or .ndjson file in Finder and press space.
+            Select a .yaml, .yml, .jsonl or .ndjson file in Finder and press space.
 
-            This app has no other purpose — it hosts the preview extension and \
+            This app has no other purpose — it hosts the preview extensions and \
             declares the JSON Lines file type. You can quit it now.
             """)
         text.font = .systemFont(ofSize: 13)
@@ -37,7 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "JSONL Preview"
+        window.title = "Dev Quick Look"
         window.contentView = content
         window.center()
         window.makeKeyAndOrderFront(nil)

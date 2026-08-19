@@ -1,35 +1,53 @@
 #!/usr/bin/env bash
 #
-# Builds JSONLPreview.app (host) with JSONLPreviewer.appex (Quick Look preview
-# extension) embedded, and installs it into ~/Applications.
+# Builds DevQuickLook.app with two Quick Look preview extensions embedded and
+# installs it into ~/Applications:
 #
-# No Xcode project: swiftc plus two Info.plists is all an app extension is. The
-# only non-obvious part is the appex entry point, which must be NSExtensionMain
-# instead of main.
+#   YAMLPreviewer.appex   public.yaml              .yaml .yml
+#   JSONLPreviewer.appex  nl.vincentbruijn.jsonl   .jsonl .ndjson
 #
-#   ./build-jsonl-preview.sh              build + install to ~/Applications
-#   ./build-jsonl-preview.sh --build-only build into ./build, do not install
-#   ./build-jsonl-preview.sh --uninstall  remove the installed app
+# No Xcode project: an app extension is a bundle with an Info.plist and a
+# binary, and swiftc produces both. The only non-obvious part is the entry
+# point, which must be NSExtensionMain instead of main.
+#
+#   ./build-quicklooks.sh              build + install to ~/Applications
+#   ./build-quicklooks.sh --build-only build into ./build, do not install
+#   ./build-quicklooks.sh --uninstall  remove the installed app
 #
 set -euo pipefail
 
-APP_NAME="JSONLPreview"
-EXT_NAME="JSONLPreviewer"
-APP_ID="nl.vincentbruijn.jsonlpreview"
-EXT_ID="nl.vincentbruijn.jsonlpreview.previewer"
+APP_NAME="DevQuickLook"
+APP_ID="nl.vincentbruijn.devquicklook"
 MIN_MACOS="13.0"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD="$HERE/build"
 DEST="$HOME/Applications/${APP_NAME}.app"
+LEGACY="$HOME/Applications/JSONLPreview.app"   # pre-YAML layout
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+
+# name : bundle-id-suffix : UTI : sources
+EXTENSIONS=(
+  "YAMLPreviewer:yaml:public.yaml:YAMLRenderer.swift YAMLPreviewViewController.swift"
+  "JSONLPreviewer:jsonl:nl.vincentbruijn.jsonl:JSONLRenderer.swift JSONLPreviewViewController.swift"
+)
+SHARED="PreviewStyle.swift TextPreviewController.swift"
+
+unregister() {
+  local app="$1"
+  [ -d "$app" ] || return 0
+  for appex in "$app"/Contents/PlugIns/*.appex; do
+    [ -d "$appex" ] && pluginkit -r "$appex" 2>/dev/null || true
+  done
+  [ -x "$LSREGISTER" ] && "$LSREGISTER" -u "$app" 2>/dev/null || true
+  rm -rf "$app"
+}
 
 INSTALL=1
 case "${1:-}" in
   --uninstall)
-    pluginkit -r "$DEST/Contents/PlugIns/${EXT_NAME}.appex" 2>/dev/null || true
-    [ -x "$LSREGISTER" ] && "$LSREGISTER" -u "$DEST" 2>/dev/null || true
-    rm -rf "$DEST"
+    unregister "$DEST"
+    unregister "$LEGACY"
     qlmanage -r >/dev/null 2>&1 || true
     qlmanage -r cache >/dev/null 2>&1 || true
     echo "Removed $DEST"
@@ -40,37 +58,38 @@ case "${1:-}" in
   *) echo "unknown option: $1" >&2; exit 64 ;;
 esac
 
-ARCH="$(uname -m)"
-TARGET="${ARCH}-apple-macos${MIN_MACOS}"
-
+TARGET="$(uname -m)-apple-macos${MIN_MACOS}"
 APP="$BUILD/${APP_NAME}.app"
-APPEX="$APP/Contents/PlugIns/${EXT_NAME}.appex"
 
 rm -rf "$BUILD"
-mkdir -p "$APP/Contents/MacOS" "$APPEX/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/PlugIns"
 
-# ---------------------------------------------------------------- extension --
+# --------------------------------------------------------------- extensions --
 
-swiftc \
-  -target "$TARGET" \
-  -module-name "$EXT_NAME" \
-  -O \
-  -framework Cocoa -framework Quartz \
-  -Xlinker -e -Xlinker _NSExtensionMain \
-  -o "$APPEX/Contents/MacOS/$EXT_NAME" \
-  "$HERE/PreviewViewController.swift" "$HERE/JSONLRenderer.swift"
+for spec in "${EXTENSIONS[@]}"; do
+  IFS=":" read -r EXT_NAME SUFFIX UTI SOURCES <<< "$spec"
+  APPEX="$APP/Contents/PlugIns/${EXT_NAME}.appex"
+  mkdir -p "$APPEX/Contents/MacOS"
 
-cat > "$APPEX/Contents/Info.plist" <<PLIST
+  # shellcheck disable=SC2086
+  swiftc \
+    -target "$TARGET" \
+    -module-name "$EXT_NAME" \
+    -O \
+    -framework Cocoa -framework Quartz \
+    -Xlinker -e -Xlinker _NSExtensionMain \
+    -o "$APPEX/Contents/MacOS/$EXT_NAME" \
+    $(for f in $SHARED $SOURCES; do echo "$HERE/$f"; done)
+
+  cat > "$APPEX/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
     <string>${EXT_NAME}</string>
-    <key>CFBundleDisplayName</key>
-    <string>JSONL Preview</string>
     <key>CFBundleIdentifier</key>
-    <string>${EXT_ID}</string>
+    <string>${APP_ID}.${SUFFIX}</string>
     <key>CFBundleExecutable</key>
     <string>${EXT_NAME}</string>
     <key>CFBundlePackageType</key>
@@ -87,7 +106,7 @@ cat > "$APPEX/Contents/Info.plist" <<PLIST
         <dict>
             <key>QLSupportedContentTypes</key>
             <array>
-                <string>nl.vincentbruijn.jsonl</string>
+                <string>${UTI}</string>
             </array>
             <key>QLSupportsSearchableItems</key>
             <false/>
@@ -100,8 +119,10 @@ cat > "$APPEX/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
+  plutil -lint "$APPEX/Contents/Info.plist" >/dev/null
+done
 
-# --------------------------------------------------------------- host app ----
+# ---------------------------------------------------------------- host app ---
 
 swiftc \
   -target "$TARGET" \
@@ -109,11 +130,12 @@ swiftc \
   -O \
   -framework Cocoa \
   -o "$APP/Contents/MacOS/$APP_NAME" \
-  "$HERE/JSONLPreviewApp.swift"
+  "$HERE/DevQuickLookApp.swift"
 
-# The extension can only claim a type something on the system declares, so the
-# host app declares it. Keep this in sync with install-dev-utis.sh, and install
-# that one with --no-jsonl so only one bundle owns the type.
+# An extension can only claim a type something on the system declares.
+# public.yaml is declared by macOS itself (CoreTypes.bundle), so only JSONL
+# needs a declaration here. Keep it in sync with install-dev-utis.sh, and run
+# that one with --no-jsonl so exactly one bundle owns the type.
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -122,7 +144,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleName</key>
     <string>${APP_NAME}</string>
     <key>CFBundleDisplayName</key>
-    <string>JSONL Preview</string>
+    <string>Dev Quick Look</string>
     <key>CFBundleIdentifier</key>
     <string>${APP_ID}</string>
     <key>CFBundleExecutable</key>
@@ -166,8 +188,6 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </dict>
 </plist>
 PLIST
-
-plutil -lint "$APPEX/Contents/Info.plist" >/dev/null
 plutil -lint "$APP/Contents/Info.plist" >/dev/null
 
 # ---------------------------------------------------------------- signing ----
@@ -175,8 +195,8 @@ plutil -lint "$APP/Contents/Info.plist" >/dev/null
 # App Sandbox is required for app extensions. Quick Look hands the extension a
 # sandbox extension for the file being previewed, so read access to that file
 # needs no entitlement of its own.
-SANDBOX_ENTS="$BUILD/sandbox.entitlements"
-cat > "$SANDBOX_ENTS" <<'PLIST'
+ENTS="$BUILD/sandbox.entitlements"
+cat > "$ENTS" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -190,8 +210,10 @@ cat > "$SANDBOX_ENTS" <<'PLIST'
 PLIST
 
 # Nested code first, then the container; otherwise the outer seal is stale.
-codesign --force --sign - --timestamp=none --entitlements "$SANDBOX_ENTS" "$APPEX"
-codesign --force --sign - --timestamp=none --entitlements "$SANDBOX_ENTS" "$APP"
+for appex in "$APP"/Contents/PlugIns/*.appex; do
+  codesign --force --sign - --timestamp=none --entitlements "$ENTS" "$appex"
+done
+codesign --force --sign - --timestamp=none --entitlements "$ENTS" "$APP"
 codesign --verify --deep --strict "$APP"
 
 echo "Built $APP"
@@ -199,12 +221,15 @@ echo "Built $APP"
 # ---------------------------------------------------------------- install ----
 
 if [ "$INSTALL" -eq 1 ]; then
-  rm -rf "$DEST"
+  unregister "$LEGACY"
+  unregister "$DEST"
   mkdir -p "$HOME/Applications"
   ditto "$APP" "$DEST"
 
   "$LSREGISTER" -f "$DEST"
-  pluginkit -a "$DEST/Contents/PlugIns/${EXT_NAME}.appex" 2>/dev/null || true
+  for appex in "$DEST"/Contents/PlugIns/*.appex; do
+    pluginkit -a "$appex" 2>/dev/null || true
+  done
   qlmanage -r >/dev/null 2>&1 || true
   qlmanage -r cache >/dev/null 2>&1 || true
 
@@ -213,12 +238,10 @@ if [ "$INSTALL" -eq 1 ]; then
 Installed $DEST
 
 Next:
-  ./install-dev-utis.sh --no-jsonl     # YAML only; this app now owns .jsonl
-  open "$DEST"                         # run once to register, then quit
+  open "$DEST"          # run once to register, then quit
 
 Verify:
-  mdls -name kMDItemContentType some.jsonl   # expect nl.vincentbruijn.jsonl
-  qlmanage -p some.jsonl
-  pluginkit -m -p com.apple.quicklook.preview -v | grep -i jsonl
+  pluginkit -m -p com.apple.quicklook.preview -v | grep devquicklook
+  qlmanage -p some.yaml
 EOF
 fi
