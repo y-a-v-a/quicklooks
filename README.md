@@ -73,8 +73,8 @@ letting the JSON previewer claim it would only produce an error.
 
 ## What gets built
 
-No Xcode project. An app extension is a bundle with an `Info.plist` and a
-binary, and `swiftc` produces both:
+No Xcode project. An app extension is an `Info.plist` plus a binary, and
+`swiftc` produces both.
 
 ```
 ~/Applications/DevQuickLook.app
@@ -86,22 +86,12 @@ binary, and `swiftc` produces both:
   Contents/PlugIns/JSONLPreviewer.appex  claims nl.vincentbruijn.jsonl
 ```
 
-- The host app exists for two reasons only: an app extension has to ship inside
-  an app, and a UTI has to be declared by something LaunchServices knows about.
-  It has no other function.
-- One appex can claim several types, which is how `.ini` and `.toml` share a
-  previewer.
-- The appex links with `-e _NSExtensionMain` instead of the usual `main`. This
-  is the one part of an app extension that is not plist wiring.
-- `TextPreviewController` builds its view in `loadView()`, so there is no nib
-  and no `NSExtensionMainStoryboard` key.
-- Both bundles are ad-hoc signed with App Sandbox on. Quick Look hands the
-  extension a sandbox extension for the file being previewed, so reading that
-  file needs no entitlement of its own.
-- No `CFBundleDocumentTypes` anywhere, so none of this becomes the default
-  opener for your files. Your editor keeps that role.
-
-### Source layout
+The host app exists only because an extension must ship inside an app, and a
+UTI must be declared by something LaunchServices knows about. One appex can
+claim several types, which is how `.ini` and `.toml` share a previewer. Each
+links with `-e _NSExtensionMain` rather than `main` — the one part that is not
+plist wiring — and is ad-hoc signed with App Sandbox on. Nothing declares
+`CFBundleDocumentTypes`, so your editor stays the default opener.
 
 | File | Role |
 | --- | --- |
@@ -114,99 +104,27 @@ binary, and `swiftc` produces both:
 | `*PreviewViewController.swift` | four-line subclass naming its renderer |
 | `install-dev-utis.sh` | superseded, see below |
 
-Adding a format means a renderer, a controller subclass, and one line in the
-`EXTENSIONS` array in `build-quicklooks.sh`.
-
-### Adding it to an Xcode project instead
-
-New macOS **App** named `DevQuickLook`, bundle id
-`nl.vincentbruijn.devquicklook`, then File → New → Target → macOS → **Quick Look
-Preview Extension** per format. Delete the generated `PreviewViewController.xib`,
-drop in the shared files plus that format's renderer and controller, and copy
-the `Info.plist` bodies out of `build-quicklooks.sh`. Sign to Run Locally is
-fine.
+Adding a format takes a renderer, a controller subclass and one line in the
+`EXTENSIONS` array. For an Xcode project instead, make one Quick Look Preview
+Extension target per format and copy the plist bodies out of that script.
 
 ## The renderers
 
-All four share one palette in `PreviewStyle.swift`, so files of different types
-sitting next to each other in Finder look like they came from the same tool.
-All read a bounded prefix of the file — `quicklookd` kills slow previews — and
-say so in the header when output was cut.
+All four share the palette in `PreviewStyle.swift` and read a bounded prefix —
+`quicklookd` kills slow previews — noting in the header when output was cut.
+Caps are the `render` defaults. Each renderer comments the cases that look like
+markup but are not.
 
-### JSON and JSONL
+**JSON and JSONL** share a hand-written parser. `JSONSerialization` returns an
+unordered dictionary and pushes numbers through `NSNumber`, turning `1.0` into
+`1`. `JSONValue.swift` keeps both order and source text, and one `sortKeys`
+flag decides the rest: JSONL sorts so records diff by eye; `.json` keeps its
+author's order. Malformed documents report line and column, and still show it.
 
-`JSONValue.swift` holds a hand-written parser because `JSONSerialization` loses
-two things worth keeping:
-
-- **Key order.** It returns an unordered dictionary. Sorting is right for JSONL,
-  where records are log lines and sorted keys let you diff two previews by eye,
-  but alphabetising a `package.json` is the kind of help nobody asked for. So
-  `.json` keeps the order the author wrote and `.jsonl` sorts, one `JSONWriter`
-  with a `sortKeys` flag.
-- **Number text.** Round-tripping through `NSNumber` turns `1.0` into `1`, `1e3`
-  into `1000`, and quietly mangles integers past 2^53. The parser keeps each
-  number's source text and prints that back. Strings keep their source text too,
-  escapes included, so you see what is in the file rather than a re-encoding.
-
-**JSON** parses whole or not at all. On a syntax error the header gives
-`invalid JSON at line L, column C` with the reason and still shows the raw text
-underneath, so you can go look. Nesting deeper than 128 is refused rather than
-recursed into. The header summarises the top level: `object, 14 keys`.
-
-**JSONL** renders at most 300 records. A single malformed line becomes a red
-`invalid JSON` marker plus the raw prefix instead of aborting the preview.
-
-### YAML
-
-Highlights rather than parses. A parser has to either succeed or fail, and Quick
-Look gets pointed at half-written config files constantly; a line-oriented lexer
-degrades one line at a time. It also keeps the file's own layout, because with
-YAML the indentation, comments and key order are what you came to look at.
-
-Handled, because each of these looks like markup and is not:
-
-- `url: https://host/a:b` — a key colon has to be followed by whitespace.
-- `"value # not a comment"` — `#` only opens a comment outside quotes.
-- `|` and `>` block scalars, whose more-indented lines stay literal text even
-  when they contain `foo:` or `#`. Chomping and indent variants too: `|-`,
-  `>+`, `|2`.
-- Anchors, aliases, tags and merge keys: `&base`, `*base`, `!!str`, `<<`.
-- Flow collections, including the keys inside them: `{a: 1, b: [x, y]}`.
-- An unterminated quote colours to end of line instead of running away.
-
-### INI and TOML
-
-One lexer, because `[section]` / `key = value` / comment lines are the same
-shape either way. They differ in one place that changes colouring, so the
-dialect comes from the extension rather than a sniff:
-
-- Windows INI has **no inline comments**. In `path = C:\tmp ; note` the value
-  really is `C:\tmp ; note`, and `php.ini` is full of lines like that. TOML ends
-  the value at the `#`.
-- Only `.toml` gets TOML rules. `.cfg` and `.config` resolve to `public.toml` on
-  macOS but in practice hold configparser-style INI. Being wrong in the INI
-  direction only under-colours a comment; being wrong the other way eats half a
-  value.
-
-Also handled:
-
-- `[section]` and TOML `[[array of tables]]`, anchored on the *first* `]` so a
-  trailing `# note ]` does not swallow the line. Rendered bold, brackets
-  included — sections are what you scan a config file for, and hue alone did
-  not separate them from keys at 12pt.
-- `key = value` and configparser's `key: value`, where the colon has to be
-  followed by whitespace, or `C:\Users` and `http://host` would split.
-- TOML numbers in full: `1_000_000`, `0xDEADBEEF`, `0o755`, `0b1101`, `-17`,
-  and datetimes like `1979-05-27T07:32:00Z`.
-- `"""` and `'''` strings, whose lines stay literal even when they contain
-  `foo:` or `#`. Single-quoted strings are literal in TOML, so only `"` takes
-  escapes.
-- Arrays, inline tables, and the keys inside them: `{ ip = "10.0.0.1" }`.
-
-### Tuning
-
-Byte and record caps are the `maxBytes` / `maxRecords` / `maxLines` defaults on
-each `render` function. The palette is `PreviewStyle.swift`.
+**YAML** and **INI/TOML** highlight rather than parse, so half-written files
+degrade one line at a time and keep their layout. INI and TOML share a lexer
+but split on inline comments — in INI, `path = C:\tmp ; note` is all value — so
+the dialect comes from the extension.
 
 ## install-dev-utis.sh
 
