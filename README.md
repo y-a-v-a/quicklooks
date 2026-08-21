@@ -1,100 +1,71 @@
 # Quick Look for config formats on macOS
 
-Space-bar previews, syntax coloured, in `~/Applications` — no sudo, no
-`/Applications` clutter.
+Space-bar previews for the config and data formats macOS leaves blank or
+renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
+`/Applications` clutter, no Xcode project.
 
-| Extensions | Type | Previewer |
-| --- | --- | --- |
-| `.yaml` `.yml` | `public.yaml` | `YAMLPreviewer` |
-| `.ini` | `com.microsoft.ini` | `INIPreviewer` |
-| `.cfg` `.config` `.toml` | `public.toml` | `INIPreviewer` |
-| `.json` | `public.json` | `JSONPreviewer` |
-| `.jsonl` `.ndjson` | `nl.vincentbruijn.jsonl` | `JSONLPreviewer` |
+| Extensions | Type | Previewer | Before |
+| --- | --- | --- | --- |
+| `.yaml` `.yml` | `public.yaml` | `YAMLPreviewer` | nothing |
+| `.ini` | `com.microsoft.ini` | `INIPreviewer` | nothing |
+| `.cfg` `.config` `.toml` | `public.toml` | `INIPreviewer` | nothing |
+| `.json` | `public.json` | `JSONPreviewer` | plain built-in preview |
+| `.jsonl` `.ndjson` | `nl.vincentbruijn.jsonl` | `JSONLPreviewer` | nothing |
+
+Requires macOS 13 or later and Xcode's command line tools for `swiftc`.
+Developed and verified on macOS 26.5.
+
+## Install
 
 ```sh
 ./build-quicklooks.sh
 open ~/Applications/DevQuickLook.app   # run once to register, then quit
 ```
 
-That is the whole thing. Part 1 below is the older, Xcode-free approach; it
-still earns its place for JSONL, and is worth reading for why it is not enough.
-
-## Part 1 — UTI declarations (no Xcode needed)
+Then select a file in Finder and press space. Check the previewers appear under
+System Settings → General → Login Items & Extensions → Quick Look, where you
+can also turn any of them off individually.
 
 ```sh
-chmod +x install-dev-utis.sh
-./install-dev-utis.sh
+./build-quicklooks.sh --build-only   # build into ./build, do not install
+./build-quicklooks.sh --uninstall    # remove it again
 ```
 
-This writes a stub `~/Applications/DevUTIs.app` whose only purpose is to carry
-`UTImportedTypeDeclarations`. LaunchServices reads them, `.yaml`/`.yml` becomes
-`public.yaml` and `.jsonl`/`.ndjson` becomes `nl.vincentbruijn.jsonl`.
+Sample files with the awkward cases live in `samples/`. Space-bar them after
+installing to check nothing regressed.
 
-Deliberate choices:
+## Why this is needed at all
 
-- No `CFBundleDocumentTypes`, so the stub never becomes the default opener for
-  these files. Your editor keeps that role.
-- JSONL conforms to `public.plain-text`, **not** `public.json`. Conforming to
-  JSON would let the built-in JSON previewer claim it, and it would fail —
-  JSONL is not valid JSON. Conforming to plain text is what gets the built-in
-  text previewer to render it.
-- Bundle lives in `~/Applications`, so no sudo.
+Most of these files resolve to a perfectly good type that simply has no
+previewer attached.
 
-Uninstall: `./install-dev-utis.sh --uninstall`
-
-### Why this only works for JSONL
-
-The JSONL half works: nothing else declares that type, so the declaration lands
-and the text previewer picks the file up.
-
-The YAML half is inert, and the same trick would fail for INI and TOML. macOS
-already declares those types itself, in
-`/System/Library/CoreServices/CoreTypes.bundle` and elsewhere, and a *declared*
-type beats an *imported* one — the import is ignored. Worse, every one of those
-declarations conforms to `public.text`, while the built-in text previewer binds
-`public.plain-text`:
+macOS ships a previewer bound to `public.plain-text`, and a file gets it by
+*conforming* to that type. But the system already declares `public.yaml`,
+`com.microsoft.ini` and `public.toml` itself, and every one of them conforms to
+`public.text` — the parent — rather than to `public.plain-text`:
 
 ```sh
 mdls -name kMDItemContentTypeTree some.yaml   # public.text, no public.plain-text
 ```
 
-| Extension | Resolves to | Conforms to | Previewed? |
-| --- | --- | --- | --- |
-| `.yaml` `.yml` | `public.yaml` | `public.text` | no |
-| `.ini` | `com.microsoft.ini` | `public.text` | no |
-| `.cfg` `.config` `.toml` | `public.toml` | `public.text` | no |
-| `.json` | `public.json` | `public.text` | yes, built-in previewer |
-| `.jsonl` `.ndjson` | undeclared, so ours lands | `public.plain-text` | yes, as text |
+So the type resolves, nothing claims it, and you get an empty preview pane.
 
-`.json` is the odd one out: macOS ships a previewer bound to it directly, so it
-was never broken, just plain. An extension can claim a type the system already
-previews and win, which is how `JSONPreviewer` takes over. If you would rather
-have Apple's back, untick it under System Settings → General → Login Items &
-Extensions → Quick Look; the file type is untouched either way.
+The obvious fix does not work. You can ship a bundle carrying
+`UTImportedTypeDeclarations` to restate the conformance, but a **declared** type
+beats an **imported** one, so the system's version wins and the import is
+ignored. You cannot restate the conformance of a type you do not own.
 
-So these files resolve to perfectly good UTIs that no previewer claims, and you
-get nothing. There is no fix at the UTI layer: you cannot restate the
-conformance of a type you do not own. A preview extension names the type it
-handles directly, so conformance stops mattering — which is Part 2.
+A Quick Look preview extension names the type it handles directly, in
+`QLSupportedContentTypes`. Conformance stops mattering, which is what this
+project uses. It also works for a type the system already previews — that is how
+`JSONPreviewer` takes `.json` over from the built-in one.
 
-(Checked on macOS 26.5. `.conf` and `.properties` are still undeclared and
-resolve to `dyn.*`; if you want those, declare a UTI for them the way
-`install-dev-utis.sh` does for JSONL, and add it to the INI previewer.)
+The exception is JSONL. Nothing declares it, so the host app declares
+`nl.vincentbruijn.jsonl` in its Info.plist, conforming to `public.plain-text`
+and deliberately **not** to `public.json` — a JSONL file is not valid JSON, so
+letting the JSON previewer claim it would only produce an error.
 
-## Part 2 — the preview extensions
-
-```sh
-./build-quicklooks.sh          # build + install to ~/Applications
-open ~/Applications/DevQuickLook.app   # run once to register, then quit
-```
-
-Uninstall: `./build-quicklooks.sh --uninstall`
-
-If you also installed Part 1, reinstall it with `--no-jsonl`. The host app
-declares the JSONL type now, and two declarations make which previewer wins a
-coin toss. Part 1 is otherwise redundant.
-
-### What gets built
+## What gets built
 
 No Xcode project. An app extension is a bundle with an `Info.plist` and a
 binary, and `swiftc` produces both:
@@ -109,138 +80,160 @@ binary, and `swiftc` produces both:
   Contents/PlugIns/JSONLPreviewer.appex  claims nl.vincentbruijn.jsonl
 ```
 
-- `DevQuickLookApp.swift` is the host. An app extension has to ship inside an
-  app, and a UTI has to be declared by something LaunchServices knows about;
-  the host exists for those two reasons only.
-- Each appex declares its type in `QLSupportedContentTypes` and gets it — an
-  extension claims a type by name, so `public.yaml` not conforming to
-  `public.plain-text` is no longer an obstacle.
-- Only JSONL needs `UTImportedTypeDeclarations` in the host. The others are
-  already system types; declaring them again would be ignored anyway.
+- The host app exists for two reasons only: an app extension has to ship inside
+  an app, and a UTI has to be declared by something LaunchServices knows about.
+  It has no other function.
 - One appex can claim several types, which is how `.ini` and `.toml` share a
   previewer.
+- The appex links with `-e _NSExtensionMain` instead of the usual `main`. This
+  is the one part of an app extension that is not plist wiring.
 - `TextPreviewController` builds its view in `loadView()`, so there is no nib
   and no `NSExtensionMainStoryboard` key.
-- The appex links with `-e _NSExtensionMain` instead of the usual `main` — the
-  one thing about extensions that is not just plist wiring.
 - Both bundles are ad-hoc signed with App Sandbox on. Quick Look hands the
-  extension a sandbox extension for the file being previewed, so read access to
-  that file needs no entitlement of its own.
+  extension a sandbox extension for the file being previewed, so reading that
+  file needs no entitlement of its own.
+- No `CFBundleDocumentTypes` anywhere, so none of this becomes the default
+  opener for your files. Your editor keeps that role.
 
-Check they appear under System Settings → General → Login Items & Extensions →
-Quick Look.
+### Source layout
 
-### Building it in Xcode instead
+| File | Role |
+| --- | --- |
+| `build-quicklooks.sh` | builds, signs and installs everything |
+| `DevQuickLookApp.swift` | the host app |
+| `PreviewStyle.swift` | shared palette and the `t()` append helper |
+| `TextPreviewController.swift` | scrolling monospace view, base class |
+| `JSONValue.swift` | order-preserving JSON parser and pretty-printer |
+| `*Renderer.swift` | one per format: file bytes to attributed string |
+| `*PreviewViewController.swift` | four-line subclass naming its renderer |
+| `install-dev-utis.sh` | superseded, see below |
 
-If you would rather have a project: new macOS **App** named `DevQuickLook`,
-bundle id `nl.vincentbruijn.devquicklook`, then File → New → Target → macOS →
-**Quick Look Preview Extension** per format. Delete the generated
-`PreviewViewController.xib`, drop in the shared files plus that format's
-renderer and controller, and copy the `Info.plist` bodies out of
-`build-quicklooks.sh`. Sign to Run Locally is fine.
+Adding a format means a renderer, a controller subclass, and one line in the
+`EXTENSIONS` array in `build-quicklooks.sh`.
 
-## Renderer behavior
+### Adding it to an Xcode project instead
 
-Shared palette in `PreviewStyle.swift`, so a `.jsonl` and a `.yaml` side by side
-in Finder look like they came from the same tool.
+New macOS **App** named `DevQuickLook`, bundle id
+`nl.vincentbruijn.devquicklook`, then File → New → Target → macOS → **Quick Look
+Preview Extension** per format. Delete the generated `PreviewViewController.xib`,
+drop in the shared files plus that format's renderer and controller, and copy
+the `Info.plist` bodies out of `build-quicklooks.sh`. Sign to Run Locally is
+fine.
 
-### JSON and JSONL — `JSONValue.swift`, `JSONRenderer.swift`, `JSONLRenderer.swift`
+## The renderers
 
-Both parse with `JSONParser` and print with `JSONWriter`, and differ in exactly
-one flag: `sortKeys`.
+All four share one palette in `PreviewStyle.swift`, so files of different types
+sitting next to each other in Finder look like they came from the same tool.
+All read a bounded prefix of the file — `quicklookd` kills slow previews — and
+say so in the header when output was cut.
 
-`JSONValue.swift` exists because `JSONSerialization` loses two things this
-previewer wants to keep:
+### JSON and JSONL
 
-- **Key order.** It returns an unordered dictionary. Sorting is right for JSONL
-  — those are log records, and sorted keys let you diff two previews by eye —
-  but alphabetising a `package.json` is the kind of help nobody asked for, so
-  `.json` keeps the order the author wrote.
-- **Number text.** Round-tripping through `NSNumber` turns `1.0` into `1`,
-  `1e3` into `1000`, and quietly mangles integers past 2^53. The parser keeps
-  each number's source text and prints that back.
+`JSONValue.swift` holds a hand-written parser because `JSONSerialization` loses
+two things worth keeping:
 
-Strings are kept as raw source too, escapes included, so the preview shows what
-is in the file rather than a re-encoding of it.
+- **Key order.** It returns an unordered dictionary. Sorting is right for JSONL,
+  where records are log lines and sorted keys let you diff two previews by eye,
+  but alphabetising a `package.json` is the kind of help nobody asked for. So
+  `.json` keeps the order the author wrote and `.jsonl` sorts, one `JSONWriter`
+  with a `sortKeys` flag.
+- **Number text.** Round-tripping through `NSNumber` turns `1.0` into `1`, `1e3`
+  into `1000`, and quietly mangles integers past 2^53. The parser keeps each
+  number's source text and prints that back. Strings keep their source text too,
+  escapes included, so you see what is in the file rather than a re-encoding.
 
-**JSON** reads at most 4 MB. A document is one value, so it parses whole or not
-at all: on a syntax error the header says `invalid JSON at line L, column C`
-with the reason, and the raw text is still shown underneath so you can go look.
-Nesting deeper than 128 is refused rather than recursed into. The header
-summarises the top level — `object, 14 keys`.
+**JSON** parses whole or not at all. On a syntax error the header gives
+`invalid JSON at line L, column C` with the reason and still shows the raw text
+underneath, so you can go look. Nesting deeper than 128 is refused rather than
+recursed into. The header summarises the top level: `object, 14 keys`.
 
-**JSONL** reads at most 4 MB and 300 records, whichever comes first;
-`quicklookd` kills slow previews and session logs get large. One malformed line
-renders as a red `invalid JSON` marker plus the raw prefix instead of aborting
-the whole preview.
+**JSONL** renders at most 300 records. A single malformed line becomes a red
+`invalid JSON` marker plus the raw prefix instead of aborting the preview.
 
-Tune `maxBytes` in `JSONRenderer.render`, `maxBytes` / `maxRecords` in
-`JSONLRenderer.render`.
+### YAML
 
-### YAML — `YAMLRenderer.swift`
-
-Highlights, does not parse. A parser has to either succeed or fail, and Quick
+Highlights rather than parses. A parser has to either succeed or fail, and Quick
 Look gets pointed at half-written config files constantly; a line-oriented lexer
 degrades one line at a time. It also keeps the file's own layout, because with
-YAML the indentation, comments and key order are what you came to look at —
-re-serialising the way the JSONL side does would lose the point.
+YAML the indentation, comments and key order are what you came to look at.
 
-Handled, because each one looks like a key or a comment and is not:
+Handled, because each of these looks like markup and is not:
 
 - `url: https://host/a:b` — a key colon has to be followed by whitespace.
 - `"value # not a comment"` — `#` only opens a comment outside quotes.
 - `|` and `>` block scalars, whose more-indented lines stay literal text even
-  when they contain `foo:` or `#`. Chomping and indent variants (`|-`, `>+`,
-  `|2`) too.
+  when they contain `foo:` or `#`. Chomping and indent variants too: `|-`,
+  `>+`, `|2`.
 - Anchors, aliases, tags and merge keys: `&base`, `*base`, `!!str`, `<<`.
-- Flow collections, including keys inside them: `{a: 1, b: [x, y]}`.
+- Flow collections, including the keys inside them: `{a: 1, b: [x, y]}`.
 - An unterminated quote colours to end of line instead of running away.
 
-Reads at most 4 MB and 5000 lines. Tune in `YAMLRenderer.render`.
+### INI and TOML
 
-### INI and TOML — `INIRenderer.swift`
-
-Also highlights rather than parses, and keeps the file's layout, for the same
-reasons. One lexer covers both, because `[section]` / `key = value` / comment
-lines are the same shape either way.
-
-They differ in one place that changes colouring, so the dialect comes from the
-extension rather than a sniff:
+One lexer, because `[section]` / `key = value` / comment lines are the same
+shape either way. They differ in one place that changes colouring, so the
+dialect comes from the extension rather than a sniff:
 
 - Windows INI has **no inline comments**. In `path = C:\tmp ; note` the value
-  really is `C:\tmp ; note`, and `php.ini` is full of lines like that. TOML
-  ends the value at the `#`.
-- Only `.toml` gets TOML rules. `.cfg` and `.config` resolve to `public.toml`
-  on macOS but in practice hold configparser-style INI. Being wrong in the INI
+  really is `C:\tmp ; note`, and `php.ini` is full of lines like that. TOML ends
+  the value at the `#`.
+- Only `.toml` gets TOML rules. `.cfg` and `.config` resolve to `public.toml` on
+  macOS but in practice hold configparser-style INI. Being wrong in the INI
   direction only under-colours a comment; being wrong the other way eats half a
   value.
 
-Handled:
+Also handled:
 
 - `[section]` and TOML `[[array of tables]]`, anchored on the *first* `]` so a
-  trailing `# note ]` does not swallow the line.
+  trailing `# note ]` does not swallow the line. Rendered bold, brackets
+  included — sections are what you scan a config file for, and hue alone did
+  not separate them from keys at 12pt.
 - `key = value` and configparser's `key: value`, where the colon has to be
-  followed by whitespace — otherwise `C:\Users` and `http://host` would split.
+  followed by whitespace, or `C:\Users` and `http://host` would split.
 - TOML numbers in full: `1_000_000`, `0xDEADBEEF`, `0o755`, `0b1101`, `-17`,
   and datetimes like `1979-05-27T07:32:00Z`.
-- `"""` and `'''` strings, whose lines stay literal even when they contain `foo:`
-  or `#`. Single-quoted strings are literal in TOML, so only `"` takes escapes.
+- `"""` and `'''` strings, whose lines stay literal even when they contain
+  `foo:` or `#`. Single-quoted strings are literal in TOML, so only `"` takes
+  escapes.
 - Arrays, inline tables, and the keys inside them: `{ ip = "10.0.0.1" }`.
 
-Section headers are bold, brackets included. They are what you scan a config
-file for, and teal-against-blue alone did not separate them from keys at 12pt.
+### Tuning
 
-Reads at most 4 MB and 5000 lines. Tune in `INIRenderer.render`.
+Byte and record caps are the `maxBytes` / `maxRecords` / `maxLines` defaults on
+each `render` function. The palette is `PreviewStyle.swift`.
+
+## install-dev-utis.sh
+
+The original approach, kept for reference. It writes a stub
+`~/Applications/DevUTIs.app` carrying `UTImportedTypeDeclarations` for YAML and
+JSONL and nothing else, which needs no Xcode at all.
+
+It is superseded. Its YAML half never worked, for the reason above, and the host
+app now declares the JSONL type itself. If you have it installed, remove it:
+
+```sh
+./install-dev-utis.sh --uninstall
+```
+
+It is still the right tool if you only want a type *declared* rather than
+previewed — adding `.conf` or `.properties`, say, which are undeclared and
+resolve to `dyn.*`. Declare a UTI for them there, then add it to the relevant
+appex in `build-quicklooks.sh`.
 
 ## Debugging
 
 ```sh
-qlmanage -m plugins                 # what is registered
-pluginkit -m -p com.apple.quicklook.preview -v | grep devquicklook
-qlmanage -p some.yaml               # preview in a window, stderr visible
-mdls -name kMDItemContentType f     # confirm the UTI resolved
+pluginkit -m -p com.apple.quicklook.preview -v | grep devquicklook   # registered?
+qlmanage -p some.yaml                     # preview in a window, stderr visible
+mdls -name kMDItemContentType some.yaml   # confirm the UTI resolved
+qlmanage -r && qlmanage -r cache          # previews are cached per file
 log stream --predicate 'process == "quicklookd" OR process == "QuickLookUIService"'
 ```
 
-A `dyn.ah62d4rv4…` content type means LaunchServices has not picked up the
-declaration. Re-run `lsregister -f`, then log out and back in.
+A `dyn.ah62d4rv4…` content type means LaunchServices has not picked up a
+declaration. Re-run `lsregister -f`, then log out and back in — it caches
+aggressively and does not always win on the first try.
+
+---
+
+© 2026 Vincent Bruijn
