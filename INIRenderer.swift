@@ -76,9 +76,12 @@ enum INIRenderer {
             }
 
             if c[i] == "[", let section = sectionEnd(c, from: i) {
-                body.t(String(c[i..<section.nameStart]), PreviewStyle.punct)     // [ or [[
-                body.t(String(c[section.nameStart..<section.nameEnd]), PreviewStyle.tag)
-                body.t(String(c[section.nameEnd...section.close]), PreviewStyle.punct)
+                // Bold, brackets included, so the header reads as one unit.
+                // Sections are what you scan a config file for, and hue alone
+                // did not separate them from keys at this size.
+                body.t(String(c[i..<section.nameStart]), PreviewStyle.punct, PreviewStyle.monoBold)
+                body.t(String(c[section.nameStart..<section.nameEnd]), PreviewStyle.tag, PreviewStyle.monoBold)
+                body.t(String(c[section.nameEnd...section.close]), PreviewStyle.punct, PreviewStyle.monoBold)
                 openMultiline = scanValue(c, from: section.close + 1, into: body, dialect)
             } else if let (delimiter, at) = keyDelimiter(c, from: i, dialect) {
                 body.t(String(c[i..<at]), PreviewStyle.key)

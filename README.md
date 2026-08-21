@@ -196,6 +196,9 @@ Handled:
   or `#`. Single-quoted strings are literal in TOML, so only `"` takes escapes.
 - Arrays, inline tables, and the keys inside them: `{ ip = "10.0.0.1" }`.
 
+Section headers are bold, brackets included. They are what you scan a config
+file for, and teal-against-blue alone did not separate them from keys at 12pt.
+
 Reads at most 4 MB and 5000 lines. Tune in `INIRenderer.render`.
 
 ## Debugging
