@@ -1,0 +1,16 @@
+{
+  "name": "quicklooks",
+  "version": "1.0.0",
+  "exact_float": 1.0,
+  "exponent": 1e3,
+  "big": 12345678901234567890,
+  "negative_zero": -0.0,
+  "unicode_escape": "café — dash",
+  "escaped": "tab\there \"quoted\" back\\slash",
+  "empty_object": {},
+  "empty_array": [],
+  "nested": { "a": { "b": { "c": [1, 2, 3] } } },
+  "flags": [true, false, null],
+  "zzz_last": "author order, not alphabetical",
+  "aaa_first": "should stay after zzz_last"
+}

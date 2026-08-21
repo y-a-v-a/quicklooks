@@ -8,6 +8,7 @@ Space-bar previews, syntax coloured, in `~/Applications` — no sudo, no
 | `.yaml` `.yml` | `public.yaml` | `YAMLPreviewer` |
 | `.ini` | `com.microsoft.ini` | `INIPreviewer` |
 | `.cfg` `.config` `.toml` | `public.toml` | `INIPreviewer` |
+| `.json` | `public.json` | `JSONPreviewer` |
 | `.jsonl` `.ndjson` | `nl.vincentbruijn.jsonl` | `JSONLPreviewer` |
 
 ```sh
@@ -62,7 +63,14 @@ mdls -name kMDItemContentTypeTree some.yaml   # public.text, no public.plain-tex
 | `.yaml` `.yml` | `public.yaml` | `public.text` | no |
 | `.ini` | `com.microsoft.ini` | `public.text` | no |
 | `.cfg` `.config` `.toml` | `public.toml` | `public.text` | no |
+| `.json` | `public.json` | `public.text` | yes, built-in previewer |
 | `.jsonl` `.ndjson` | undeclared, so ours lands | `public.plain-text` | yes, as text |
+
+`.json` is the odd one out: macOS ships a previewer bound to it directly, so it
+was never broken, just plain. An extension can claim a type the system already
+previews and win, which is how `JSONPreviewer` takes over. If you would rather
+have Apple's back, untick it under System Settings → General → Login Items &
+Extensions → Quick Look; the file type is untouched either way.
 
 So these files resolve to perfectly good UTIs that no previewer claims, and you
 get nothing. There is no fix at the UTI layer: you cannot restate the
@@ -97,6 +105,7 @@ binary, and `swiftc` produces both:
   Contents/MacOS/DevQuickLook            host app, does nothing
   Contents/PlugIns/YAMLPreviewer.appex   claims public.yaml
   Contents/PlugIns/INIPreviewer.appex    claims com.microsoft.ini, public.toml
+  Contents/PlugIns/JSONPreviewer.appex   claims public.json
   Contents/PlugIns/JSONLPreviewer.appex  claims nl.vincentbruijn.jsonl
 ```
 
@@ -135,16 +144,38 @@ renderer and controller, and copy the `Info.plist` bodies out of
 Shared palette in `PreviewStyle.swift`, so a `.jsonl` and a `.yaml` side by side
 in Finder look like they came from the same tool.
 
-### JSONL — `JSONLRenderer.swift`
+### JSON and JSONL — `JSONValue.swift`, `JSONRenderer.swift`, `JSONLRenderer.swift`
 
-- Reads at most 4 MB and renders at most 300 records, whichever comes first.
-  `quicklookd` kills slow previews, and session logs get large.
-- Header shows filename, record count, file size, and whether output was cut.
-- Keys sorted, so diffing two previews by eye actually works.
-- A malformed line renders as a red `invalid JSON` marker plus the raw prefix
-  instead of aborting the whole preview.
+Both parse with `JSONParser` and print with `JSONWriter`, and differ in exactly
+one flag: `sortKeys`.
 
-Tune `maxBytes` / `maxRecords` in `JSONLRenderer.render`.
+`JSONValue.swift` exists because `JSONSerialization` loses two things this
+previewer wants to keep:
+
+- **Key order.** It returns an unordered dictionary. Sorting is right for JSONL
+  — those are log records, and sorted keys let you diff two previews by eye —
+  but alphabetising a `package.json` is the kind of help nobody asked for, so
+  `.json` keeps the order the author wrote.
+- **Number text.** Round-tripping through `NSNumber` turns `1.0` into `1`,
+  `1e3` into `1000`, and quietly mangles integers past 2^53. The parser keeps
+  each number's source text and prints that back.
+
+Strings are kept as raw source too, escapes included, so the preview shows what
+is in the file rather than a re-encoding of it.
+
+**JSON** reads at most 4 MB. A document is one value, so it parses whole or not
+at all: on a syntax error the header says `invalid JSON at line L, column C`
+with the reason, and the raw text is still shown underneath so you can go look.
+Nesting deeper than 128 is refused rather than recursed into. The header
+summarises the top level — `object, 14 keys`.
+
+**JSONL** reads at most 4 MB and 300 records, whichever comes first;
+`quicklookd` kills slow previews and session logs get large. One malformed line
+renders as a red `invalid JSON` marker plus the raw prefix instead of aborting
+the whole preview.
+
+Tune `maxBytes` in `JSONRenderer.render`, `maxBytes` / `maxRecords` in
+`JSONLRenderer.render`.
 
 ### YAML — `YAMLRenderer.swift`
 

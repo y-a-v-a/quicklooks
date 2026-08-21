@@ -2,7 +2,6 @@ import AppKit
 
 enum JSONLRenderer {
 
-
     /// Reads at most `maxBytes` and renders at most `maxRecords` records.
     /// Both caps matter: quicklookd kills previews that take too long.
     static func render(url: URL, maxBytes: Int = 4 << 20, maxRecords: Int = 300) throws -> NSAttributedString {
@@ -30,11 +29,16 @@ enum JSONLRenderer {
             body.t("\u{2500}\u{2500} \(lineNo) ", PreviewStyle.dim)
             body.t(String(repeating: "\u{2500}", count: 24) + "\n", PreviewStyle.dim)
 
-            if let object = try? JSONSerialization.jsonObject(with: Data(line), options: [.fragmentsAllowed]) {
-                append(object, body, 0)
+            let text = String(decoding: line, as: UTF8.self)
+            if let value = try? JSONParser.parse(text) {
+                // Sorted, so diffing two previews by eye actually works. A
+                // .json document keeps its own order instead — there the
+                // author's ordering is the thing you recognise.
+                var writer = JSONWriter(sortKeys: true)
+                writer.write(value, into: body)
             } else {
                 body.t("invalid JSON: ", PreviewStyle.error)
-                body.t(String(decoding: line.prefix(400), as: UTF8.self), PreviewStyle.dim)
+                body.t(String(text.prefix(400)), PreviewStyle.dim)
             }
             body.t("\n\n", PreviewStyle.punct)
         }
@@ -52,66 +56,5 @@ enum JSONLRenderer {
             header.t("\u{2026} remainder not shown\n", PreviewStyle.dim)
         }
         return header
-    }
-
-    private static func append(_ value: Any, _ out: NSMutableAttributedString, _ depth: Int) {
-        let pad = String(repeating: "  ", count: depth + 1)
-        let close = String(repeating: "  ", count: depth)
-
-        switch value {
-        case let dict as [String: Any]:
-            guard !dict.isEmpty else { out.t("{}", PreviewStyle.punct); return }
-            out.t("{\n", PreviewStyle.punct)
-            let keys = dict.keys.sorted()
-            for (i, k) in keys.enumerated() {
-                out.t(pad, PreviewStyle.punct)
-                out.t(quoted(k), PreviewStyle.key)
-                out.t(": ", PreviewStyle.punct)
-                append(dict[k] as Any, out, depth + 1)
-                out.t(i == keys.count - 1 ? "\n" : ",\n", PreviewStyle.punct)
-            }
-            out.t(close + "}", PreviewStyle.punct)
-
-        case let array as [Any]:
-            guard !array.isEmpty else { out.t("[]", PreviewStyle.punct); return }
-            out.t("[\n", PreviewStyle.punct)
-            for (i, v) in array.enumerated() {
-                out.t(pad, PreviewStyle.punct)
-                append(v, out, depth + 1)
-                out.t(i == array.count - 1 ? "\n" : ",\n", PreviewStyle.punct)
-            }
-            out.t(close + "]", PreviewStyle.punct)
-
-        case let s as String:
-            out.t(quoted(s), PreviewStyle.string)
-
-        case let n as NSNumber:
-            if CFGetTypeID(n) == CFBooleanGetTypeID() {
-                out.t(n.boolValue ? "true" : "false", PreviewStyle.literal)
-            } else {
-                out.t(n.stringValue, PreviewStyle.number)
-            }
-
-        case is NSNull:
-            out.t("null", PreviewStyle.literal)
-
-        default:
-            out.t("\(value)", PreviewStyle.dim)
-        }
-    }
-
-    private static func quoted(_ s: String) -> String {
-        var out = "\""
-        for c in s.unicodeScalars {
-            switch c {
-            case "\"": out += "\\\""
-            case "\\": out += "\\\\"
-            case "\n": out += "\\n"
-            case "\r": out += "\\r"
-            case "\t": out += "\\t"
-            default: out.unicodeScalars.append(c)
-            }
-        }
-        return out + "\""
     }
 }

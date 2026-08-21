@@ -5,6 +5,7 @@
 #
 #   YAMLPreviewer.appex   public.yaml                          .yaml .yml
 #   INIPreviewer.appex    com.microsoft.ini, public.toml       .ini .cfg .config .toml
+#   JSONPreviewer.appex   public.json                          .json
 #   JSONLPreviewer.appex  nl.vincentbruijn.jsonl               .jsonl .ndjson
 #
 # No Xcode project: an app extension is a bundle with an Info.plist and a
@@ -31,7 +32,8 @@ LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchS
 EXTENSIONS=(
   "YAMLPreviewer:yaml:public.yaml:YAMLRenderer.swift YAMLPreviewViewController.swift"
   "INIPreviewer:ini:com.microsoft.ini,public.toml:INIRenderer.swift INIPreviewViewController.swift"
-  "JSONLPreviewer:jsonl:nl.vincentbruijn.jsonl:JSONLRenderer.swift JSONLPreviewViewController.swift"
+  "JSONPreviewer:json:public.json:JSONValue.swift JSONRenderer.swift JSONPreviewViewController.swift"
+  "JSONLPreviewer:jsonl:nl.vincentbruijn.jsonl:JSONValue.swift JSONLRenderer.swift JSONLPreviewViewController.swift"
 )
 SHARED="PreviewStyle.swift TextPreviewController.swift"
 
