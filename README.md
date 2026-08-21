@@ -15,6 +15,10 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 Requires macOS 13 or later and Xcode's command line tools for `swiftc`.
 Developed and verified on macOS 26.5.
 
+![Quick Look previewing a YAML file: keys in blue, strings in red, numbers in
+purple, comments in green, with a line-number gutter and a header showing the
+filename, line count and file size.](docs/yaml-preview.png)
+
 ## Install
 
 ```sh
