@@ -238,4 +238,6 @@ aggressively and does not always win on the first try.
 
 ---
 
+MIT licensed — see [LICENSE](LICENSE).
+
 © 2026 Vincent Bruijn
