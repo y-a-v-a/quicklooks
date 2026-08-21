@@ -18,6 +18,8 @@ Developed and verified on macOS 26.5.
 ## Install
 
 ```sh
+git clone https://github.com/y-a-v-a/quicklooks.git
+cd quicklooks
 ./build-quicklooks.sh
 open ~/Applications/DevQuickLook.app   # run once to register, then quit
 ```
