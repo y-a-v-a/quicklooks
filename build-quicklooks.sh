@@ -32,7 +32,7 @@ LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchS
 EXTENSIONS=(
   "YAMLPreviewer:yaml:public.yaml:YAMLRenderer.swift YAMLPreviewViewController.swift"
   "INIPreviewer:ini:com.microsoft.ini,public.toml:INIRenderer.swift INIPreviewViewController.swift"
-  "JSONPreviewer:json:public.json:JSONValue.swift JSONRenderer.swift JSONPreviewViewController.swift"
+  "JSONPreviewer:json:public.json:JSONValue.swift JSONLRenderer.swift JSONRenderer.swift JSONPreviewViewController.swift"
   "JSONLPreviewer:jsonl:nl.vincentbruijn.jsonl:JSONValue.swift JSONLRenderer.swift JSONLPreviewViewController.swift"
 )
 SHARED="PreviewStyle.swift TextPreviewController.swift"

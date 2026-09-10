@@ -1,0 +1,4 @@
+{"event":"start","ts":"2026-06-25T06:39:30.875Z","tags":["a","b"],"ok":true}
+
+{"event":"config","ts":"2026-06-25T06:39:31.002Z","nested":{"z":1,"a":[1,2.0,null]},"ok":true}
+{"event":"stop","ts":"2026-06-25T06:39:32.117Z","reason":"not valid as one document: three top-level values","ok":false}

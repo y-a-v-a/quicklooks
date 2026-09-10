@@ -69,7 +69,10 @@ project uses. It also works for a type the system already previews — that is h
 The exception is JSONL. Nothing declares it, so the host app declares
 `nl.vincentbruijn.jsonl` in its Info.plist, conforming to `public.plain-text`
 and deliberately **not** to `public.json` — a JSONL file is not valid JSON, so
-letting the JSON previewer claim it would only produce an error.
+nothing else should treat it as one document. The reverse does happen: log
+buffers and exports are often JSONL behind a `.json` name, so `JSONPreviewer`
+retries as JSONL when the whole-document parse fails and every line parses on
+its own.
 
 ## What gets built
 

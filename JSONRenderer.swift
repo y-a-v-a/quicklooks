@@ -1,6 +1,7 @@
 import AppKit
 
-/// Whole-document JSON, pretty-printed in the file's own key order.
+/// Whole-document JSON, pretty-printed in the file's own key order. A file
+/// that turns out to be one record per line is handed to `JSONLRenderer`.
 enum JSONRenderer {
 
     /// Reads at most `maxBytes`. Unlike JSONL there is no per-record cap: a
@@ -19,6 +20,9 @@ enum JSONRenderer {
         var truncated = clipped
 
         if clipped {
+            if let lines = JSONLRenderer.renderIfJSONL(data: data, url: url, totalBytes: totalBytes, partial: true) {
+                return lines
+            }
             // A clipped document cannot parse, so show it as text rather than
             // claiming it is broken.
             body.t("file is larger than \(ByteCountFormatter.string(fromByteCount: Int64(maxBytes), countStyle: .file)), showing raw text\n\n", PreviewStyle.error)
@@ -32,6 +36,9 @@ enum JSONRenderer {
                 body.t("\n", PreviewStyle.punct)
                 truncated = writer.truncated
             } catch let failure as JSONParser.Failure {
+                if let lines = JSONLRenderer.renderIfJSONL(data: data, url: url, totalBytes: totalBytes, partial: false) {
+                    return lines
+                }
                 let at = JSONParser.position(of: failure.index, in: text)
                 body.t("invalid JSON at line \(at.line), column \(at.column): ", PreviewStyle.error)
                 body.t("\(failure.message)\n\n", PreviewStyle.error)
