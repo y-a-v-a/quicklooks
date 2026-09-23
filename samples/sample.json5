@@ -1,0 +1,10 @@
+// JSON5: unquoted keys, single quotes, hex, trailing commas.
+{
+  unquoted: 'single-quoted string',
+  hex: 0xDEADbeef,
+  leadingDot: .5,
+  positive: +1,
+  notANumber: NaN,
+  infinite: -Infinity,
+  "quoted key": [1, 2, 3,],
+}

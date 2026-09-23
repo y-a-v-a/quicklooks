@@ -15,10 +15,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let text = NSTextField(wrappingLabelWithString: """
             Quick Look previewers installed.
 
-            Select a .yaml, .toml, .json, .jsonl or Dockerfile in Finder and press space.
+            Select a .yaml, .toml, .json, .jsonl, Dockerfile or dotfile like .zshrc in Finder and press space.
 
             This app has no other purpose — it hosts the preview extensions and \
-            declares the JSON Lines file type. You can quit it now.
+            declares the file types macOS lacks. You can quit it now.
             """)
         text.font = .systemFont(ofSize: 13)
         text.translatesAutoresizingMaskIntoConstraints = false

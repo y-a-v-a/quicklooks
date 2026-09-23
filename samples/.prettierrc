@@ -1,0 +1,5 @@
+{
+  // JSON or YAML under one name; this one is JSON with a comment.
+  "semi": false,
+  "singleQuote": true,
+}

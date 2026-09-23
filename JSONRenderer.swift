@@ -1,12 +1,19 @@
 import AppKit
 
 /// Whole-document JSON, pretty-printed in the file's own key order. A file
-/// that turns out to be one record per line is handed to `JSONLRenderer`.
+/// that turns out to be one record per line is handed to `JSONLRenderer`, and
+/// one with comments or trailing commas to `JSONCRenderer`.
 enum JSONRenderer {
 
     /// Reads at most `maxBytes`. Unlike JSONL there is no per-record cap: a
     /// JSON document is one value, so it parses whole or not at all.
     static func render(url: URL, maxBytes: Int = 4 << 20) throws -> NSAttributedString {
+        switch url.pathExtension.lowercased() {
+        case "jsonc": return try JSONCRenderer.render(url: url, dialect: .jsonc, maxBytes: maxBytes)
+        case "json5": return try JSONCRenderer.render(url: url, dialect: .json5, maxBytes: maxBytes)
+        default: break
+        }
+
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
 
@@ -35,9 +42,20 @@ enum JSONRenderer {
                 writer.write(value, into: body)
                 body.t("\n", PreviewStyle.punct)
                 truncated = writer.truncated
-            } catch let failure as JSONParser.Failure {
+            } catch let strict as JSONParser.Failure {
                 if let lines = JSONLRenderer.renderIfJSONL(data: data, url: url, totalBytes: totalBytes, partial: false) {
                     return lines
+                }
+                // tsconfig.json and VS Code settings are JSONC behind a .json
+                // name. Shown as written, since the comments are the point.
+                var failure = strict
+                do {
+                    _ = try JSONParser.parse(text, lenient: true)
+                    return JSONCRenderer.render(text: text, url: url, totalBytes: totalBytes,
+                                                clipped: false, note: "read as JSON with comments")
+                } catch let lenient as JSONParser.Failure {
+                    // Whichever reading got further is the one the author meant.
+                    if lenient.index > strict.index { failure = lenient }
                 }
                 let at = JSONParser.position(of: failure.index, in: text)
                 body.t("invalid JSON at line \(at.line), column \(at.column): ", PreviewStyle.error)

@@ -1,0 +1,10 @@
+# INI-shaped, so it goes to the INI renderer.
+[user]
+	name = Jane Doe
+	email = jane@example.com
+[alias]
+	lg = log --graph --oneline --decorate
+[url "git@github.com:"]
+	insteadOf = https://github.com/
+[core]
+	autocrlf = input

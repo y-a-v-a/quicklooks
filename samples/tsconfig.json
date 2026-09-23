@@ -1,0 +1,17 @@
+{
+  // JSONC behind a .json name, as tsc and VS Code write it.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "nodenext", /* inline block comment */
+    "strict": true,
+    "outDir": "dist",
+    "paths": { "@/*": ["./src/*"] },   // a // inside a string is not a comment
+    "url": "https://example.com/a//b",
+    /*
+     * A multi-line block comment
+     * holding "quotes" and { braces }.
+     */
+    "maxNodeModuleJsDepth": 2,
+  },
+  "exclude": ["node_modules", "dist",],
+}

@@ -33,16 +33,23 @@ struct JSONParser {
     private let c: [Character]
     private var i = 0
     private let maxDepth: Int
+    private let lenient: Bool
 
-    private init(_ text: String, maxDepth: Int) {
+    private init(_ text: String, maxDepth: Int, lenient: Bool) {
         self.c = Array(text)
         self.maxDepth = maxDepth
+        self.lenient = lenient
     }
 
     /// Fragments are allowed at the top level, so a JSONL line holding a bare
     /// `123` or `"str"` parses.
-    static func parse(_ text: String, maxDepth: Int = 128) throws -> JSONValue {
-        var p = JSONParser(text, maxDepth: maxDepth)
+    ///
+    /// `lenient` accepts JSONC, the dialect of `tsconfig.json` and VS Code's
+    /// settings: `//` and `/* */` comments, and a trailing comma before `}`
+    /// or `]`. Nothing else is relaxed — JSON5's unquoted keys and single
+    /// quotes still fail.
+    static func parse(_ text: String, maxDepth: Int = 128, lenient: Bool = false) throws -> JSONValue {
+        var p = JSONParser(text, maxDepth: maxDepth, lenient: lenient)
         p.skipWhitespace()
         let value = try p.parseValue(depth: 0)
         p.skipWhitespace()
@@ -57,15 +64,30 @@ struct JSONParser {
         var line = 1, column = 1
         for (n, ch) in text.enumerated() {
             if n >= index { break }
-            if ch == "\n" { line += 1; column = 1 } else { column += 1 }
+            if ch.isNewline { line += 1; column = 1 } else { column += 1 }
         }
         return (line, column)
     }
 
     // MARK: - scanning
 
+    /// Comments count as whitespace in lenient mode. An unterminated `/*`
+    /// runs to the end, where the caller then reports what is missing.
     private mutating func skipWhitespace() {
-        while i < c.count, c[i] == " " || c[i] == "\t" || c[i] == "\n" || c[i] == "\r" { i += 1 }
+        while i < c.count {
+            // "\r\n" is a single Character, equal to neither "\r" nor "\n".
+            if c[i] == " " || c[i] == "\t" || c[i] == "\n" || c[i] == "\r" || c[i] == "\r\n" { i += 1; continue }
+            guard lenient, c[i] == "/", i + 1 < c.count else { return }
+            if c[i + 1] == "/" {
+                while i < c.count, !c[i].isNewline { i += 1 }
+            } else if c[i + 1] == "*" {
+                i += 2
+                while i < c.count, !(c[i] == "*" && i + 1 < c.count && c[i + 1] == "/") { i += 1 }
+                i = min(i + 2, c.count)
+            } else {
+                return
+            }
+        }
     }
 
     private mutating func parseValue(depth: Int) throws -> JSONValue {
@@ -107,7 +129,12 @@ struct JSONParser {
             skipWhitespace()
 
             guard i < c.count else { throw Failure.syntax(index: i, message: "unclosed object") }
-            if c[i] == "," { i += 1; continue }
+            if c[i] == "," {
+                i += 1
+                skipWhitespace()
+                if lenient, i < c.count, c[i] == "}" { i += 1; return .object(members) }
+                continue
+            }
             if c[i] == "}" { i += 1; return .object(members) }
             throw Failure.syntax(index: i, message: "expected ',' or '}'")
         }
@@ -125,7 +152,12 @@ struct JSONParser {
             skipWhitespace()
 
             guard i < c.count else { throw Failure.syntax(index: i, message: "unclosed array") }
-            if c[i] == "," { i += 1; continue }
+            if c[i] == "," {
+                i += 1
+                skipWhitespace()
+                if lenient, i < c.count, c[i] == "]" { i += 1; return .array(elements) }
+                continue
+            }
             if c[i] == "]" { i += 1; return .array(elements) }
             throw Failure.syntax(index: i, message: "expected ',' or ']'")
         }
@@ -158,7 +190,7 @@ struct JSONParser {
                 i += 1
                 return String(c[start..<i])
             }
-            if ch == "\n" { throw Failure.syntax(index: i, message: "unterminated string") }
+            if ch.isNewline { throw Failure.syntax(index: i, message: "unterminated string") }
             i += 1
         }
         throw Failure.syntax(index: start, message: "unterminated string")

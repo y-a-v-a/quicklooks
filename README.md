@@ -10,8 +10,12 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 | `.ini` | `com.microsoft.ini` | `INIPreviewer` | nothing |
 | `.cfg` `.config` `.toml` | `public.toml` | `INIPreviewer` | nothing |
 | `.json` | `public.json` | `JSONPreviewer` | plain built-in preview |
+| `.jsonc` `.json5` | `nl.vincentbruijn.jsonc`, `nl.vincentbruijn.json5` | `JSONPreviewer` | nothing |
 | `.jsonl` `.ndjson` | `nl.vincentbruijn.jsonl` | `JSONLPreviewer` | nothing |
-| `Dockerfile` `*.Dockerfile` `Dockerfile.*` | `nl.vincentbruijn.dockerfile`, `public.data` | `DockerfilePreviewer` | nothing |
+| `*.Dockerfile` `*.Containerfile` | `nl.vincentbruijn.dockerfile` | `DockerfilePreviewer` | nothing |
+| dotfiles, `Dockerfile`, `Brewfile` and other extensionless text | `public.data` | `DotfilePreviewer` | nothing |
+| `.conf` `.env` `.tf` `.lock` `.properties` `.service` … | `nl.vincentbruijn.config-text` | `DotfilePreviewer` | nothing |
+| `.go` `.rs` `.kt` `.dart` `.zig` `.lua` `.nix` `.vue` … | `nl.vincentbruijn.source-text` | `DotfilePreviewer` | nothing |
 
 Requires macOS 13 or later and Xcode's command line tools for `swiftc`.
 Developed and verified on macOS 26.5.
@@ -75,12 +79,18 @@ buffers and exports are often JSONL behind a `.json` name, so `JSONPreviewer`
 retries as JSONL when the whole-document parse fails and every line parses on
 its own.
 
-Dockerfiles are the other exception. `app.Dockerfile` gets a declared
-`nl.vincentbruijn.dockerfile`, but a bare `Dockerfile` has no extension, and a
-type can only be matched on extension or MIME type, never on a filename. It
-resolves to `public.data`. So `DockerfilePreviewer` claims `public.data` too
-and checks the filename, throwing for anything else. Quick Look then shows its
-usual icon view for other extensionless files.
+`.jsonc`, `.json5`, `app.Dockerfile` and a list of developer extensions
+(`.go`, `.conf`, `.tf`, …) are undeclared too, so the host app declares them.
+Undeclared, they resolve to `dyn.*` types that no previewer can reach.
+
+Dotfiles cannot be declared at all. `.zshrc`, `.gitconfig` and a bare
+`Dockerfile` have no extension, and a type can only be matched on extension or
+MIME type, never on a filename. They resolve to `public.data`. So
+`DotfilePreviewer` claims `public.data` and checks the content: text if the
+first 8 KB has no NUL byte and decodes as UTF-8. The filename then picks the
+renderer. Anything else is thrown back, and Quick Look shows its usual icon
+view. A `dyn.*` type is *not* matched by a `public.data` claim, so
+`Dockerfile.prod` and other unlisted extensions still get nothing.
 
 ## What gets built
 
@@ -89,14 +99,17 @@ No Xcode project. An app extension is an `Info.plist` plus a binary, and
 
 ```
 ~/Applications/DevQuickLook.app
-  Contents/Info.plist                    UTImportedTypeDeclarations for jsonl, dockerfile
+  Contents/Info.plist                    UTImportedTypeDeclarations for jsonl,
+                                         jsonc, json5, dockerfile, config, source
   Contents/MacOS/DevQuickLook            host app, does nothing
   Contents/PlugIns/YAMLPreviewer.appex   claims public.yaml
   Contents/PlugIns/INIPreviewer.appex    claims com.microsoft.ini, public.toml
-  Contents/PlugIns/JSONPreviewer.appex   claims public.json
+  Contents/PlugIns/JSONPreviewer.appex   claims public.json, jsonc, json5
   Contents/PlugIns/JSONLPreviewer.appex  claims nl.vincentbruijn.jsonl
   Contents/PlugIns/DockerfilePreviewer.appex
-                                         claims nl.vincentbruijn.dockerfile, public.data
+                                         claims nl.vincentbruijn.dockerfile
+  Contents/PlugIns/DotfilePreviewer.appex
+                                         claims public.data, config, source
 ```
 
 The host app exists only because an extension must ship inside an app, and a
@@ -114,6 +127,7 @@ plist wiring — and is ad-hoc signed with App Sandbox on. Nothing declares
 | `TextPreviewController.swift` | scrolling monospace view, base class |
 | `JSONValue.swift` | order-preserving JSON parser and pretty-printer |
 | `*Renderer.swift` | one per format: file bytes to attributed string |
+| `DotfileRenderer.swift` | text sniffing, and filename → renderer |
 | `*PreviewViewController.swift` | four-line subclass naming its renderer |
 | `install-dev-utis.sh` | superseded, see below |
 
@@ -123,7 +137,7 @@ Extension target per format and copy the plist bodies out of that script.
 
 ## The renderers
 
-All five share the palette in `PreviewStyle.swift` and read a bounded prefix —
+All share the palette in `PreviewStyle.swift` and read a bounded prefix —
 `quicklookd` kills slow previews — noting in the header when output was cut.
 Caps are the `render` defaults. Each renderer comments the cases that look like
 markup but are not.
@@ -133,6 +147,7 @@ unordered dictionary and pushes numbers through `NSNumber`, turning `1.0` into
 `1`. `JSONValue.swift` keeps both order and source text, and one `sortKeys`
 flag decides the rest: JSONL sorts so records diff by eye; `.json` keeps its
 author's order. Malformed documents report line and column, and still show it.
+JSONC, like `tsconfig.json`, is shown as written, comments kept.
 
 **YAML** and **INI/TOML** highlight rather than parse, so half-written files
 degrade one line at a time and keep their layout. INI and TOML share a lexer
@@ -142,6 +157,9 @@ the dialect comes from the extension.
 **Dockerfile** is highlighted the same way. It follows backslash continuations,
 BuildKit heredocs (`RUN <<EOF`), whose bodies are literal, and the
 `# escape=` directive.
+
+**Dotfiles** reuse these by name — `.gitconfig` is INI — or get comments and
+strings highlighted.
 
 ## install-dev-utis.sh
 
@@ -156,10 +174,9 @@ app now declares the JSONL type itself. If you have it installed, remove it:
 ./install-dev-utis.sh --uninstall
 ```
 
-It is still the right tool if you only want a type *declared* rather than
-previewed — adding `.conf` or `.properties`, say, which are undeclared and
-resolve to `dyn.*`. Declare a UTI for them there, then add it to the relevant
-appex in `build-quicklooks.sh`.
+To preview another undeclared extension, add it to `CONFIG_EXTS` or
+`SOURCE_EXTS` in `build-quicklooks.sh` and, for highlighting, to
+`DotfileRenderer.swift`.
 
 ## Debugging
 

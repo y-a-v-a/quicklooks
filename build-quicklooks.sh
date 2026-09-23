@@ -5,10 +5,13 @@
 #
 #   YAMLPreviewer.appex   public.yaml                          .yaml .yml
 #   INIPreviewer.appex    com.microsoft.ini, public.toml       .ini .cfg .config .toml
-#   JSONPreviewer.appex   public.json                          .json
+#   JSONPreviewer.appex   public.json, nl.vincentbruijn.jsonc, .json .jsonc .json5
+#                         nl.vincentbruijn.json5
 #   JSONLPreviewer.appex  nl.vincentbruijn.jsonl               .jsonl .ndjson
-#   DockerfilePreviewer   nl.vincentbruijn.dockerfile,         Dockerfile .Dockerfile
-#                         public.data                          *.Dockerfile Dockerfile.*
+#   DockerfilePreviewer   nl.vincentbruijn.dockerfile          *.Dockerfile *.Containerfile
+#   DotfilePreviewer      public.data,                         .zshrc .gitconfig Dockerfile,
+#                         nl.vincentbruijn.config-text,        .conf .env .go .rs .tf …
+#                         nl.vincentbruijn.source-text
 #
 # No Xcode project: an app extension is a bundle with an Info.plist and a
 # binary, and swiftc produces both. The only non-obvious part is the entry
@@ -34,11 +37,28 @@ LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchS
 EXTENSIONS=(
   "YAMLPreviewer:yaml:public.yaml:YAMLRenderer.swift YAMLPreviewViewController.swift"
   "INIPreviewer:ini:com.microsoft.ini,public.toml:INIRenderer.swift INIPreviewViewController.swift"
-  "JSONPreviewer:json:public.json:JSONValue.swift JSONLRenderer.swift JSONRenderer.swift JSONPreviewViewController.swift"
+  "JSONPreviewer:json:public.json,nl.vincentbruijn.jsonc,nl.vincentbruijn.json5:JSONValue.swift JSONLRenderer.swift JSONCRenderer.swift JSONRenderer.swift JSONPreviewViewController.swift"
   "JSONLPreviewer:jsonl:nl.vincentbruijn.jsonl:JSONValue.swift JSONLRenderer.swift JSONLPreviewViewController.swift"
-  "DockerfilePreviewer:dockerfile:nl.vincentbruijn.dockerfile,public.data:DockerfileRenderer.swift DockerfilePreviewViewController.swift"
+  "DockerfilePreviewer:dockerfile:nl.vincentbruijn.dockerfile:DockerfileRenderer.swift DockerfilePreviewViewController.swift"
+  "DotfilePreviewer:dotfile:public.data,nl.vincentbruijn.config-text,nl.vincentbruijn.source-text:DockerfileRenderer.swift INIRenderer.swift YAMLRenderer.swift JSONValue.swift JSONLRenderer.swift JSONCRenderer.swift JSONRenderer.swift PlainTextRenderer.swift DotfileRenderer.swift DotfilePreviewViewController.swift"
 )
 SHARED="PreviewStyle.swift TextPreviewController.swift"
+
+# Extensions nothing on macOS declares, so they resolve to dyn.* and reach no
+# previewer at all — not even a public.data claim. Declared below as two types
+# for DotfilePreviewer. Keep in sync with byExtension in DotfileRenderer.swift,
+# and check a new one resolves to dyn.* first: declaring an extension the
+# system already owns does nothing.
+CONFIG_EXTS="env envrc conf properties lock service socket timer mount target desktop
+  gitconfig editorconfig npmrc gitignore gitattributes dockerignore tf tfvars hcl nomad"
+SOURCE_EXTS="go rs kt kts dart zig gradle groovy scala sc cs fsx jsx cjs v sv svh sol
+  prisma cue scss less styl hx vala wgsl cu ino jsonnet libsonnet nix lua hs elm purs
+  clj cljs cljc el lisp scm rkt asm vim fish zsh-theme cmake bzl bazel star rake gemspec
+  podspec awk sed ps1 psm1 jl ex exs rego just gql graphql vue svelte astro mdx"
+
+ext_xml() {
+  for e in $1; do printf '                    <string>%s</string>\n' "$e"; done
+}
 
 unregister() {
   local app="$1"
@@ -144,11 +164,12 @@ swiftc \
   "$HERE/DevQuickLookApp.swift"
 
 # An extension can only claim a type something on the system declares.
-# public.yaml is declared by macOS itself (CoreTypes.bundle), so only JSONL
-# and *.Dockerfile need a declaration here. Keep JSONL in sync with
-# install-dev-utis.sh, and run that one with --no-jsonl so exactly one bundle
-# owns the type. A bare Dockerfile has no extension to declare; it resolves to
-# public.data, which DockerfilePreviewer claims and filters by name.
+# public.yaml is declared by macOS itself (CoreTypes.bundle), so only JSONL,
+# JSONC, JSON5, *.Dockerfile and the dyn.* extensions need a declaration here. Keep JSONL in sync
+# with install-dev-utis.sh, and run that one with --no-jsonl so exactly one
+# bundle owns the type. Dotfiles and a bare Dockerfile have no extension to
+# declare; they resolve to public.data, which DotfilePreviewer claims and
+# filters by content.
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -194,6 +215,79 @@ cat > "$APP/Contents/Info.plist" <<PLIST
                 <array>
                     <string>application/jsonl</string>
                     <string>application/x-ndjson</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>nl.vincentbruijn.jsonc</string>
+            <key>UTTypeDescription</key>
+            <string>JSON with Comments</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.plain-text</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>jsonc</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>nl.vincentbruijn.json5</string>
+            <key>UTTypeDescription</key>
+            <string>JSON5 Document</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.plain-text</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>json5</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>application/json5</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>nl.vincentbruijn.config-text</string>
+            <key>UTTypeDescription</key>
+            <string>Configuration File</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.plain-text</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+$(ext_xml "$CONFIG_EXTS")
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>nl.vincentbruijn.source-text</string>
+            <key>UTTypeDescription</key>
+            <string>Source Code</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.source-code</string>
+                <string>public.plain-text</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+$(ext_xml "$SOURCE_EXTS")
                 </array>
             </dict>
         </dict>

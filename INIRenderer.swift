@@ -24,9 +24,12 @@ enum INIRenderer {
         var multilineStrings: Bool { self == .toml }
     }
 
-    /// Reads at most `maxBytes` and renders at most `maxLines` lines.
-    static func render(url: URL, maxBytes: Int = 4 << 20, maxLines: Int = 5000) throws -> NSAttributedString {
-        let dialect = Dialect.of(url)
+    /// Reads at most `maxBytes` and renders at most `maxLines` lines. Pass
+    /// `dialect` for files whose name says more than their extension, like
+    /// `Pipfile` or `Cargo.lock`.
+    static func render(url: URL, dialect: Dialect? = nil,
+                       maxBytes: Int = 4 << 20, maxLines: Int = 5000) throws -> NSAttributedString {
+        let dialect = dialect ?? Dialect.of(url)
 
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
