@@ -11,6 +11,7 @@ enum PreviewStyle {
     static let literal = NSColor.systemOrange
     static let tag = NSColor.systemTeal
     static let comment = NSColor.systemGreen
+    static let plain = NSColor.labelColor
     static let punct = NSColor.secondaryLabelColor
     static let dim = NSColor.tertiaryLabelColor
     static let error = NSColor.systemRed

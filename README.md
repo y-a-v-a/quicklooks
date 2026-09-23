@@ -11,6 +11,7 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 | `.cfg` `.config` `.toml` | `public.toml` | `INIPreviewer` | nothing |
 | `.json` | `public.json` | `JSONPreviewer` | plain built-in preview |
 | `.jsonl` `.ndjson` | `nl.vincentbruijn.jsonl` | `JSONLPreviewer` | nothing |
+| `Dockerfile` `*.Dockerfile` `Dockerfile.*` | `nl.vincentbruijn.dockerfile`, `public.data` | `DockerfilePreviewer` | nothing |
 
 Requires macOS 13 or later and Xcode's command line tools for `swiftc`.
 Developed and verified on macOS 26.5.
@@ -74,6 +75,13 @@ buffers and exports are often JSONL behind a `.json` name, so `JSONPreviewer`
 retries as JSONL when the whole-document parse fails and every line parses on
 its own.
 
+Dockerfiles are the other exception. `app.Dockerfile` gets a declared
+`nl.vincentbruijn.dockerfile`, but a bare `Dockerfile` has no extension, and a
+type can only be matched on extension or MIME type, never on a filename. It
+resolves to `public.data`. So `DockerfilePreviewer` claims `public.data` too
+and checks the filename, throwing for anything else. Quick Look then shows its
+usual icon view for other extensionless files.
+
 ## What gets built
 
 No Xcode project. An app extension is an `Info.plist` plus a binary, and
@@ -81,12 +89,14 @@ No Xcode project. An app extension is an `Info.plist` plus a binary, and
 
 ```
 ~/Applications/DevQuickLook.app
-  Contents/Info.plist                    UTImportedTypeDeclarations for jsonl
+  Contents/Info.plist                    UTImportedTypeDeclarations for jsonl, dockerfile
   Contents/MacOS/DevQuickLook            host app, does nothing
   Contents/PlugIns/YAMLPreviewer.appex   claims public.yaml
   Contents/PlugIns/INIPreviewer.appex    claims com.microsoft.ini, public.toml
   Contents/PlugIns/JSONPreviewer.appex   claims public.json
   Contents/PlugIns/JSONLPreviewer.appex  claims nl.vincentbruijn.jsonl
+  Contents/PlugIns/DockerfilePreviewer.appex
+                                         claims nl.vincentbruijn.dockerfile, public.data
 ```
 
 The host app exists only because an extension must ship inside an app, and a
@@ -113,7 +123,7 @@ Extension target per format and copy the plist bodies out of that script.
 
 ## The renderers
 
-All four share the palette in `PreviewStyle.swift` and read a bounded prefix —
+All five share the palette in `PreviewStyle.swift` and read a bounded prefix —
 `quicklookd` kills slow previews — noting in the header when output was cut.
 Caps are the `render` defaults. Each renderer comments the cases that look like
 markup but are not.
@@ -128,6 +138,10 @@ author's order. Malformed documents report line and column, and still show it.
 degrade one line at a time and keep their layout. INI and TOML share a lexer
 but split on inline comments — in INI, `path = C:\tmp ; note` is all value — so
 the dialect comes from the extension.
+
+**Dockerfile** is highlighted the same way. It follows backslash continuations,
+BuildKit heredocs (`RUN <<EOF`), whose bodies are literal, and the
+`# escape=` directive.
 
 ## install-dev-utis.sh
 

@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 #
-# Builds DevQuickLook.app with two Quick Look preview extensions embedded and
+# Builds DevQuickLook.app with its Quick Look preview extensions embedded and
 # installs it into ~/Applications:
 #
 #   YAMLPreviewer.appex   public.yaml                          .yaml .yml
 #   INIPreviewer.appex    com.microsoft.ini, public.toml       .ini .cfg .config .toml
 #   JSONPreviewer.appex   public.json                          .json
 #   JSONLPreviewer.appex  nl.vincentbruijn.jsonl               .jsonl .ndjson
+#   DockerfilePreviewer   nl.vincentbruijn.dockerfile,         Dockerfile .Dockerfile
+#                         public.data                          *.Dockerfile Dockerfile.*
 #
 # No Xcode project: an app extension is a bundle with an Info.plist and a
 # binary, and swiftc produces both. The only non-obvious part is the entry
@@ -34,6 +36,7 @@ EXTENSIONS=(
   "INIPreviewer:ini:com.microsoft.ini,public.toml:INIRenderer.swift INIPreviewViewController.swift"
   "JSONPreviewer:json:public.json:JSONValue.swift JSONLRenderer.swift JSONRenderer.swift JSONPreviewViewController.swift"
   "JSONLPreviewer:jsonl:nl.vincentbruijn.jsonl:JSONValue.swift JSONLRenderer.swift JSONLPreviewViewController.swift"
+  "DockerfilePreviewer:dockerfile:nl.vincentbruijn.dockerfile,public.data:DockerfileRenderer.swift DockerfilePreviewViewController.swift"
 )
 SHARED="PreviewStyle.swift TextPreviewController.swift"
 
@@ -142,8 +145,10 @@ swiftc \
 
 # An extension can only claim a type something on the system declares.
 # public.yaml is declared by macOS itself (CoreTypes.bundle), so only JSONL
-# needs a declaration here. Keep it in sync with install-dev-utis.sh, and run
-# that one with --no-jsonl so exactly one bundle owns the type.
+# and *.Dockerfile need a declaration here. Keep JSONL in sync with
+# install-dev-utis.sh, and run that one with --no-jsonl so exactly one bundle
+# owns the type. A bare Dockerfile has no extension to declare; it resolves to
+# public.data, which DockerfilePreviewer claims and filters by name.
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -189,6 +194,24 @@ cat > "$APP/Contents/Info.plist" <<PLIST
                 <array>
                     <string>application/jsonl</string>
                     <string>application/x-ndjson</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>nl.vincentbruijn.dockerfile</string>
+            <key>UTTypeDescription</key>
+            <string>Dockerfile</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.plain-text</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>dockerfile</string>
+                    <string>containerfile</string>
                 </array>
             </dict>
         </dict>
