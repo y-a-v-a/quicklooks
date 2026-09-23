@@ -8,7 +8,8 @@ import AppKit
 /// no declaration can reach a dotfile. It resolves to `public.data`, and
 /// claiming that brings every other extensionless file with it, binaries
 /// included. So the bytes decide
-/// first whether this is text at all, and the name then picks the renderer.
+/// first whether this is text at all — or a SQLite database, which has a
+/// magic header of its own, and the name then picks the renderer.
 /// Anything that is not text is thrown back, and Quick Look shows its usual
 /// icon view.
 enum DotfileRenderer {
@@ -21,6 +22,7 @@ enum DotfileRenderer {
     }
 
     static func render(url: URL) throws -> NSAttributedString {
+        if SQLiteRenderer.isSQLite(url) { return try SQLiteRenderer.render(url: url) }
         guard try looksLikeText(url) else { throw NotText() }
 
         switch kind(of: url) {

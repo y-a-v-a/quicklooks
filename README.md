@@ -16,6 +16,7 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 | dotfiles, `Dockerfile`, `Brewfile` and other extensionless text | `public.data` | `DotfilePreviewer` | nothing |
 | `.conf` `.env` `.tf` `.lock` `.properties` `.service` … | `nl.vincentbruijn.config-text` | `DotfilePreviewer` | nothing |
 | `.go` `.rs` `.kt` `.dart` `.zig` `.lua` `.nix` `.vue` … | `nl.vincentbruijn.source-text` | `DotfilePreviewer` | nothing |
+| `.sqlite` `.sqlite3` `.db` `.db3` `.s3db` `.sl3` `.gpkg` `.mbtiles` | `nl.vincentbruijn.sqlite` | `SQLitePreviewer` | nothing |
 
 Requires macOS 13 or later and Xcode's command line tools for `swiftc`.
 Developed and verified on macOS 26.5.
@@ -79,7 +80,7 @@ buffers and exports are often JSONL behind a `.json` name, so `JSONPreviewer`
 retries as JSONL when the whole-document parse fails and every line parses on
 its own.
 
-`.jsonc`, `.json5`, `app.Dockerfile` and a list of developer extensions
+`.jsonc`, `.json5`, `.sqlite`, `app.Dockerfile` and a list of developer extensions
 (`.go`, `.conf`, `.tf`, …) are undeclared too, so the host app declares them.
 Undeclared, they resolve to `dyn.*` types that no previewer can reach.
 
@@ -88,8 +89,9 @@ Dotfiles cannot be declared at all. `.zshrc`, `.gitconfig` and a bare
 MIME type, never on a filename. They resolve to `public.data`. So
 `DotfilePreviewer` claims `public.data` and checks the content: text if the
 first 8 KB has no NUL byte and decodes as UTF-8. The filename then picks the
-renderer. Anything else is thrown back, and Quick Look shows its usual icon
-view. A `dyn.*` type is *not* matched by a `public.data` claim, so
+renderer. It also checks for SQLite's 16-byte magic header, so Chrome's
+`History` and other extensionless databases get the SQLite preview. Anything
+else is thrown back, and Quick Look shows its usual icon view. A `dyn.*` type is *not* matched by a `public.data` claim, so
 `Dockerfile.prod` and other unlisted extensions still get nothing.
 
 ## What gets built
@@ -100,7 +102,7 @@ No Xcode project. An app extension is an `Info.plist` plus a binary, and
 ```
 ~/Applications/DevQuickLook.app
   Contents/Info.plist                    UTImportedTypeDeclarations for jsonl,
-                                         jsonc, json5, dockerfile, config, source
+                                         jsonc, json5, sqlite, dockerfile, config, source
   Contents/MacOS/DevQuickLook            host app, does nothing
   Contents/PlugIns/YAMLPreviewer.appex   claims public.yaml
   Contents/PlugIns/INIPreviewer.appex    claims com.microsoft.ini, public.toml
@@ -110,6 +112,7 @@ No Xcode project. An app extension is an `Info.plist` plus a binary, and
                                          claims nl.vincentbruijn.dockerfile
   Contents/PlugIns/DotfilePreviewer.appex
                                          claims public.data, config, source
+  Contents/PlugIns/SQLitePreviewer.appex claims nl.vincentbruijn.sqlite
 ```
 
 The host app exists only because an extension must ship inside an app, and a
@@ -160,6 +163,11 @@ BuildKit heredocs (`RUN <<EOF`), whose bodies are literal, and the
 
 **Dotfiles** reuse these by name — `.gitconfig` is INI — or get comments and
 strings highlighted.
+
+**SQLite** shows the header metadata, then every table with its row count, and
+columns, indexes and 10 rows for the first 20. The database is opened
+read-only with `immutable=1`, so WAL writes not yet checkpointed are not shown.
+Counts use `count(1)`, which a deadline can interrupt, unlike `count(*)`.
 
 ## install-dev-utis.sh
 

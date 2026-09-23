@@ -12,6 +12,8 @@
 #   DotfilePreviewer      public.data,                         .zshrc .gitconfig Dockerfile,
 #                         nl.vincentbruijn.config-text,        .conf .env .go .rs .tf …
 #                         nl.vincentbruijn.source-text
+#   SQLitePreviewer       nl.vincentbruijn.sqlite              .sqlite .sqlite3 .db .db3 .s3db
+#                                                              .sl3 .gpkg .mbtiles
 #
 # No Xcode project: an app extension is a bundle with an Info.plist and a
 # binary, and swiftc produces both. The only non-obvious part is the entry
@@ -40,7 +42,8 @@ EXTENSIONS=(
   "JSONPreviewer:json:public.json,nl.vincentbruijn.jsonc,nl.vincentbruijn.json5:JSONValue.swift JSONLRenderer.swift JSONCRenderer.swift JSONRenderer.swift JSONPreviewViewController.swift"
   "JSONLPreviewer:jsonl:nl.vincentbruijn.jsonl:JSONValue.swift JSONLRenderer.swift JSONLPreviewViewController.swift"
   "DockerfilePreviewer:dockerfile:nl.vincentbruijn.dockerfile:DockerfileRenderer.swift DockerfilePreviewViewController.swift"
-  "DotfilePreviewer:dotfile:public.data,nl.vincentbruijn.config-text,nl.vincentbruijn.source-text:DockerfileRenderer.swift INIRenderer.swift YAMLRenderer.swift JSONValue.swift JSONLRenderer.swift JSONCRenderer.swift JSONRenderer.swift PlainTextRenderer.swift DotfileRenderer.swift DotfilePreviewViewController.swift"
+  "DotfilePreviewer:dotfile:public.data,nl.vincentbruijn.config-text,nl.vincentbruijn.source-text:DockerfileRenderer.swift INIRenderer.swift YAMLRenderer.swift JSONValue.swift JSONLRenderer.swift JSONCRenderer.swift JSONRenderer.swift PlainTextRenderer.swift SQLiteRenderer.swift DotfileRenderer.swift DotfilePreviewViewController.swift"
+  "SQLitePreviewer:sqlite:nl.vincentbruijn.sqlite:SQLiteRenderer.swift SQLitePreviewViewController.swift"
 )
 SHARED="PreviewStyle.swift TextPreviewController.swift"
 
@@ -108,7 +111,7 @@ for spec in "${EXTENSIONS[@]}"; do
     -target "$TARGET" \
     -module-name "$EXT_NAME" \
     -O \
-    -framework Cocoa -framework Quartz \
+    -framework Cocoa -framework Quartz -lsqlite3 \
     -Xlinker -e -Xlinker _NSExtensionMain \
     -o "$APPEX/Contents/MacOS/$EXT_NAME" \
     $(for f in $SHARED $SOURCES; do echo "$HERE/$f"; done)
@@ -165,7 +168,8 @@ swiftc \
 
 # An extension can only claim a type something on the system declares.
 # public.yaml is declared by macOS itself (CoreTypes.bundle), so only JSONL,
-# JSONC, JSON5, *.Dockerfile and the dyn.* extensions need a declaration here. Keep JSONL in sync
+# JSONC, JSON5, SQLite, *.Dockerfile and the dyn.* extensions need a
+# declaration here. Keep JSONL in sync
 # with install-dev-utis.sh, and run that one with --no-jsonl so exactly one
 # bundle owns the type. Dotfiles and a bare Dockerfile have no extension to
 # declare; they resolve to public.data, which DotfilePreviewer claims and
@@ -288,6 +292,36 @@ $(ext_xml "$CONFIG_EXTS")
                 <key>public.filename-extension</key>
                 <array>
 $(ext_xml "$SOURCE_EXTS")
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>nl.vincentbruijn.sqlite</string>
+            <key>UTTypeDescription</key>
+            <string>SQLite Database</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.database</string>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>sqlite</string>
+                    <string>sqlite3</string>
+                    <string>db</string>
+                    <string>db3</string>
+                    <string>s3db</string>
+                    <string>sl3</string>
+                    <string>gpkg</string>
+                    <string>mbtiles</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>application/vnd.sqlite3</string>
+                    <string>application/x-sqlite3</string>
                 </array>
             </dict>
         </dict>

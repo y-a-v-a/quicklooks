@@ -17,6 +17,10 @@ class TextPreviewController: NSViewController, QLPreviewingController {
         fatalError("subclass must override render(url:)")
     }
 
+    /// Override to return false for output laid out in columns, like the
+    /// SQLite row grids, which scroll sideways instead of wrapping.
+    class func wrapsLines(for url: URL) -> Bool { true }
+
     override func loadView() {
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 820, height: 620))
 
@@ -47,6 +51,14 @@ class TextPreviewController: NSViewController, QLPreviewingController {
 
     func preparePreviewOfFile(at url: URL) async throws {
         let rendered = try Self.render(url: url)
+        if !Self.wrapsLines(for: url) {
+            let unbounded = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+            textView.maxSize = unbounded
+            textView.isHorizontallyResizable = true
+            textView.textContainer?.widthTracksTextView = false
+            textView.textContainer?.containerSize = unbounded
+            scrollView.hasHorizontalScroller = true
+        }
         textView.textStorage?.setAttributedString(rendered)
         textView.scroll(.zero)
     }
