@@ -1,0 +1,9 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Checkout renders 1`] = `
+<div
+  className="checkout"
+>
+  Total: 42
+</div>
+`;

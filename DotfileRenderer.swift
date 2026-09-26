@@ -141,6 +141,13 @@ enum DotfileRenderer {
             map[e] = .text(.semicolon)
         }
         map["vim"] = .text(.vim)
+        map["snap"] = .text(.cLike)                                   // Jest snapshots are JavaScript
+        map["drl"] = .text(PlainTextRenderer.Syntax(lineComments: ["//", "#"], blockComment: ("/*", "*/"),
+                                                    quotes: ["\""]))
+        map["vm"] = .text(PlainTextRenderer.Syntax(lineComments: ["##"], blockComment: ("#*", "*#"),
+                                                   quotes: ["\"", "'"], variables: true))
+        map["jsp"] = .text(PlainTextRenderer.Syntax(blockComment: ("<%--", "--%>"), quotes: ["\""]))
+        map["http"] = .text(PlainTextRenderer.Syntax(lineComments: ["#", "//"], quotes: ["\""]))
         return map
     }()
 }

@@ -1,0 +1,7 @@
+## Velocity: line comment
+#* block comment
+   spanning lines *#
+#set( $greeting = "Hello" )
+#foreach( $item in $items )
+  <li class="item">$greeting, ${item.name}! Visit http://example.com#anchor</li>
+#end

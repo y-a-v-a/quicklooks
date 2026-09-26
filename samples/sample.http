@@ -1,0 +1,12 @@
+### Get a product
+# comment
+GET https://api.example.com/products/42?lang=en
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Create one
+// also a comment
+POST https://api.example.com/products
+Content-Type: application/json
+
+{ "name": "Raw denim", "price": 129.95 }

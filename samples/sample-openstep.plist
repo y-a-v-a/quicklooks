@@ -1,0 +1,7 @@
+// OpenStep plists predate XML and are still read by Foundation.
+{
+    Name = "OpenStep sample";
+    Tags = (alpha, "beta gamma");
+    Count = 3;
+    Nested = { Enabled = YES; Blob = <0fbd7788>; };
+}

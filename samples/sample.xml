@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Spring-style config. The comment holds <bean id="fake"/> markup
+     that must stay green, across two lines. -->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <bean id="dataSource" class="org.example.Pool" destroy-method='close'>
+        <property name="url" value="jdbc:mysql://db?a=1&amp;b=2"/>
+        <property name="query"><value><![CDATA[SELECT * FROM t WHERE a < 3 AND b > 1]]></value></property>
+        <description>Tom &amp; Jerry&apos;s pool, not &unknown entity</description>
+    </bean>
+    <çafé naïve="日本語">Unicode names are fine</çafé>
+</beans>

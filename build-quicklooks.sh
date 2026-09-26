@@ -14,6 +14,15 @@
 #                         nl.vincentbruijn.source-text
 #   SQLitePreviewer       nl.vincentbruijn.sqlite              .sqlite .sqlite3 .db .db3 .s3db
 #                                                              .sl3 .gpkg .mbtiles
+#   PlistPreviewer        com.apple.property-list and the      .plist .entitlements .xcprivacy
+#                         Xcode subtypes below                 .stringsdict
+#   XMLPreviewer          public.xml,                          .xml .xsd .xsl .xslt .jrxml .wsdl
+#                         nl.vincentbruijn.xml-text            .iml .pom
+#   ArchivePreviewer      public.zip-archive, java archives,   .zip .jar .war .ear .tar .tgz .gz
+#                         tar and gzip
+#   ImpexPreviewer        nl.vincentbruijn.impex               .impex
+#   ClassFilePreviewer    com.sun.java-class                   .class
+#   LogPreviewer          com.apple.log                        .log
 #
 # No Xcode project: an app extension is a bundle with an Info.plist and a
 # binary, and swiftc produces both. The only non-obvious part is the entry
@@ -44,6 +53,12 @@ EXTENSIONS=(
   "DockerfilePreviewer:dockerfile:nl.vincentbruijn.dockerfile:DockerfileRenderer.swift DockerfilePreviewViewController.swift"
   "DotfilePreviewer:dotfile:public.data,nl.vincentbruijn.config-text,nl.vincentbruijn.source-text:DockerfileRenderer.swift INIRenderer.swift YAMLRenderer.swift JSONValue.swift JSONLRenderer.swift JSONCRenderer.swift JSONRenderer.swift PlainTextRenderer.swift SQLiteRenderer.swift DotfileRenderer.swift DotfilePreviewViewController.swift"
   "SQLitePreviewer:sqlite:nl.vincentbruijn.sqlite:SQLiteRenderer.swift SQLitePreviewViewController.swift"
+  "PlistPreviewer:plist:com.apple.property-list,com.apple.xcode.entitlements-property-list,com.apple.xcode.app-privacy-property-list,com.apple.xcode.strings-dictionary:ByteReader.swift XMLHighlighter.swift PlistRenderer.swift PlistPreviewViewController.swift"
+  "XMLPreviewer:xml:public.xml,nl.vincentbruijn.xml-text:ByteReader.swift XMLHighlighter.swift XMLRenderer.swift XMLPreviewViewController.swift"
+  "ArchivePreviewer:archive:public.zip-archive,com.sun.java-archive,com.sun.web-application-archive,nl.vincentbruijn.ear,public.tar-archive,org.gnu.gnu-zip-tar-archive,org.gnu.gnu-zip-archive:ByteReader.swift ClassFileRenderer.swift ArchiveRenderer.swift ArchivePreviewViewController.swift"
+  "ImpexPreviewer:impex:nl.vincentbruijn.impex:ByteReader.swift XMLHighlighter.swift XMLRenderer.swift ImpexRenderer.swift ImpexPreviewViewController.swift"
+  "ClassFilePreviewer:classfile:com.sun.java-class:ByteReader.swift ClassFileRenderer.swift ClassFilePreviewViewController.swift"
+  "LogPreviewer:log:com.apple.log:ByteReader.swift LogRenderer.swift LogPreviewViewController.swift"
 )
 SHARED="PreviewStyle.swift TextPreviewController.swift"
 
@@ -57,7 +72,8 @@ CONFIG_EXTS="env envrc conf properties lock service socket timer mount target de
 SOURCE_EXTS="go rs kt kts dart zig gradle groovy scala sc cs fsx jsx cjs v sv svh sol
   prisma cue scss less styl hx vala wgsl cu ino jsonnet libsonnet nix lua hs elm purs
   clj cljs cljc el lisp scm rkt asm vim fish zsh-theme cmake bzl bazel star rake gemspec
-  podspec awk sed ps1 psm1 jl ex exs rego just gql graphql vue svelte astro mdx"
+  podspec awk sed ps1 psm1 jl ex exs rego just gql graphql vue svelte astro mdx
+  vm jsp snap http drl"
 
 ext_xml() {
   for e in $1; do printf '                    <string>%s</string>\n' "$e"; done
@@ -168,7 +184,8 @@ swiftc \
 
 # An extension can only claim a type something on the system declares.
 # public.yaml is declared by macOS itself (CoreTypes.bundle), so only JSONL,
-# JSONC, JSON5, SQLite, *.Dockerfile and the dyn.* extensions need a
+# JSONC, JSON5, SQLite, *.Dockerfile, ImpEx, .ear, the XML dialects and the
+# dyn.* extensions need a
 # declaration here. Keep JSONL in sync
 # with install-dev-utis.sh, and run that one with --no-jsonl so exactly one
 # bundle owns the type. Dotfiles and a bare Dockerfile have no extension to
@@ -340,6 +357,64 @@ $(ext_xml "$SOURCE_EXTS")
                 <array>
                     <string>dockerfile</string>
                     <string>containerfile</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>nl.vincentbruijn.xml-text</string>
+            <key>UTTypeDescription</key>
+            <string>XML Document</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.xml</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>xsd</string>
+                    <string>xsl</string>
+                    <string>xslt</string>
+                    <string>jrxml</string>
+                    <string>wsdl</string>
+                    <string>iml</string>
+                    <string>pom</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>nl.vincentbruijn.impex</string>
+            <key>UTTypeDescription</key>
+            <string>SAP Commerce ImpEx Script</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.plain-text</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>impex</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>nl.vincentbruijn.ear</string>
+            <key>UTTypeDescription</key>
+            <string>Java Enterprise Archive</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>com.sun.java-archive</string>
+                <string>public.zip-archive</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>ear</string>
                 </array>
             </dict>
         </dict>

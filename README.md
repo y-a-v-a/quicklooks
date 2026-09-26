@@ -15,8 +15,16 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 | `*.Dockerfile` `*.Containerfile` | `nl.vincentbruijn.dockerfile` | `DockerfilePreviewer` | nothing |
 | dotfiles, `Dockerfile`, `Brewfile` and other extensionless text | `public.data` | `DotfilePreviewer` | nothing |
 | `.conf` `.env` `.tf` `.lock` `.properties` `.service` … | `nl.vincentbruijn.config-text` | `DotfilePreviewer` | nothing |
-| `.go` `.rs` `.kt` `.dart` `.zig` `.lua` `.nix` `.vue` … | `nl.vincentbruijn.source-text` | `DotfilePreviewer` | nothing |
+| `.go` `.rs` `.kt` `.dart` `.zig` `.lua` `.nix` `.vue` `.vm` `.jsp` `.snap` `.http` `.drl` … | `nl.vincentbruijn.source-text` | `DotfilePreviewer` | nothing |
 | `.sqlite` `.sqlite3` `.db` `.db3` `.s3db` `.sl3` `.gpkg` `.mbtiles` | `nl.vincentbruijn.sqlite` | `SQLitePreviewer` | nothing |
+| `.plist` `.entitlements` `.xcprivacy` `.stringsdict` | `com.apple.property-list` and its Xcode subtypes | `PlistPreviewer` | plain built-in preview |
+| `.xml` | `public.xml` | `XMLPreviewer` | plain built-in preview |
+| `.xsd` `.xsl` `.xslt` `.jrxml` `.wsdl` `.iml` `.pom` | `nl.vincentbruijn.xml-text` | `XMLPreviewer` | nothing |
+| `.zip` `.jar` `.war` `.ear` | `public.zip-archive`, `com.sun.java-archive`, `com.sun.web-application-archive`, `nl.vincentbruijn.ear` | `ArchivePreviewer` | icon only |
+| `.tar` `.tgz` `.tar.gz` `.gz` | `public.tar-archive`, `org.gnu.gnu-zip-tar-archive`, `org.gnu.gnu-zip-archive` | `ArchivePreviewer` | icon only |
+| `.class` | `com.sun.java-class` | `ClassFilePreviewer` | icon only |
+| `.impex` | `nl.vincentbruijn.impex` | `ImpexPreviewer` | nothing |
+| `.log` | `com.apple.log` | `LogPreviewer` | plain built-in preview |
 
 Requires macOS 13 or later and Xcode's command line tools for `swiftc`.
 Developed and verified on macOS 26.5.
@@ -102,7 +110,8 @@ No Xcode project. An app extension is an `Info.plist` plus a binary, and
 ```
 ~/Applications/DevQuickLook.app
   Contents/Info.plist                    UTImportedTypeDeclarations for jsonl,
-                                         jsonc, json5, sqlite, dockerfile, config, source
+                                         jsonc, json5, sqlite, dockerfile, config, source,
+                                         xml-text, impex, ear
   Contents/MacOS/DevQuickLook            host app, does nothing
   Contents/PlugIns/YAMLPreviewer.appex   claims public.yaml
   Contents/PlugIns/INIPreviewer.appex    claims com.microsoft.ini, public.toml
@@ -113,6 +122,14 @@ No Xcode project. An app extension is an `Info.plist` plus a binary, and
   Contents/PlugIns/DotfilePreviewer.appex
                                          claims public.data, config, source
   Contents/PlugIns/SQLitePreviewer.appex claims nl.vincentbruijn.sqlite
+  Contents/PlugIns/PlistPreviewer.appex  claims com.apple.property-list
+  Contents/PlugIns/XMLPreviewer.appex    claims public.xml, xml-text
+  Contents/PlugIns/ArchivePreviewer.appex
+                                         claims zip, java archives, tar, gzip
+  Contents/PlugIns/ClassFilePreviewer.appex
+                                         claims com.sun.java-class
+  Contents/PlugIns/ImpexPreviewer.appex  claims nl.vincentbruijn.impex
+  Contents/PlugIns/LogPreviewer.appex    claims com.apple.log
 ```
 
 The host app exists only because an extension must ship inside an app, and a
@@ -129,6 +146,8 @@ plist wiring — and is ad-hoc signed with App Sandbox on. Nothing declares
 | `PreviewStyle.swift` | shared palette and the `t()` append helper |
 | `TextPreviewController.swift` | scrolling monospace view, base class |
 | `JSONValue.swift` | order-preserving JSON parser and pretty-printer |
+| `XMLHighlighter.swift` | XML tokenizer shared by the plist and XML previewers |
+| `ByteReader.swift` | bounds-checked binary reads, and the report header |
 | `*Renderer.swift` | one per format: file bytes to attributed string |
 | `DotfileRenderer.swift` | text sniffing, and filename → renderer |
 | `*PreviewViewController.swift` | four-line subclass naming its renderer |
@@ -163,6 +182,54 @@ BuildKit heredocs (`RUN <<EOF`), whose bodies are literal, and the
 
 **Dotfiles** reuse these by name — `.gitconfig` is INI — or get comments and
 strings highlighted.
+
+**Property lists** are XML, so they are highlighted like markup, with the text
+inside `<key>`, `<string>`, `<integer>`, `<real>` and `<date>` coloured by
+element. Binary (`bplist00`, which is how most of `~/Library/Preferences` is
+stored) and OpenStep plists have no readable source; they are decoded with
+`PropertyListSerialization` and shown as XML, which sorts the keys. The header
+says when that happened.
+
+**XML** uses the same tokenizer as plists, with attribute names coloured instead
+of element text. UTF-16 is read by its byte order mark, and a document that is
+not UTF-8 is read as Latin-1 rather than shown with replacement marks. A
+minified document, with a line over 5,000 characters, gets line breaks between
+adjacent tags, indented by depth, before the 5,000-line cap applies; the header
+says so. SVG, XHTML and other types conform to `public.xml`, but claiming it
+does not take them over: SVG still gets Apple's own preview.
+
+**Archives** are listed, never unpacked. A zip keeps its table of contents at
+the end of the file, so a 3.7 GB zip64 archive lists as fast as a small one.
+An archive with more than 40 entries also gets a size summary per top-level
+folder, and the entry list shows the first 1,500 by path; the totals count all. A jar, war or ear also shows its manifest and the Java
+version of up to five sampled classes. A tar has no index, so each header is
+read and the member data is skipped: a seek for `.tar`, decompress-and-discard
+for `.tar.gz`. Like the SQLite counts, that runs under a 2-second budget, and a
+listing cut short says how far it got. A plain `.gz` shows the original name,
+its size and, if it is text, its first 200 lines. A damaged or truncated
+archive shows what was read and what went wrong. A file that is not an archive
+at all is thrown back for the icon view.
+
+**Class files** are shown as the declaration they compile from: modifiers,
+supertypes, fields, and method signatures with `throws`, plus the Java version
+(major 61 is Java 17). Only the constant pool and member tables are read.
+Generics are shown erased, as in plain `javap`, and synthetic members are
+counted but not listed. A universal Mach-O binary shares the `0xCAFEBABE` magic
+and is told apart by its next field.
+
+**ImpEx** colours header lines (`INSERT_UPDATE Product;code[unique=true]`),
+their modifiers, `$macro` definitions and references, `#%` code execution, and
+quoted values, including ones that span lines. A header and its rows line up in
+columns when the block has at most 1,000 rows and every cell is at most 48
+characters. Wider blocks, like translation exports, are left as written. The
+preview scrolls sideways instead of wrapping.
+
+**Logs** are read from the end, the last 1 MB and at most 5,000 lines, since
+that is where the recent lines are. The first level word on a line (`ERROR`,
+`WARN`, `SEVERE`, …) is coloured and counted in the header, and timestamps,
+exception names and stack frames are picked out. The Java Service Wrapper
+prefix that Hybris console logs carry (`INFO | jvm 1 | main | … |`) is dimmed,
+and the level after it is used. A `.log` that is binary shows metadata only.
 
 **SQLite** shows the header metadata, then every table with its row count, and
 columns, indexes and 10 rows for the first 20. The database is opened

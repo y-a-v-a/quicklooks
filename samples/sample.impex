@@ -1,0 +1,23 @@
+# ImpEx sample: macros, an aligned block, a block too wide to align,
+# a quoted value spanning lines, a continuation and code execution.
+$productCatalog=gstarProductCatalog
+$catalogVersion=catalogversion(catalog(id[default=$productCatalog]),version[default='Staged'])[unique=true]
+$lang=en
+
+INSERT_UPDATE Unit;unitType[unique=true];code[unique=true];name[lang=$lang];conversion
+;pieces;pieces;pieces;1
+;pieces;pack;pack of 6;6
+
+INSERT_UPDATE Product;code[unique=true];$catalogVersion;name[lang=$lang];description[lang=$lang];approvalStatus(code)
+;1000001;;Raw denim jeans;"A long description with a ; semicolon inside quotes, and ""escaped"" quotes";approved
+;1000002;;Chino;"Starts here
+and ends on the next line";check
+
+UPDATE Product;code[unique=true];$catalogVersion;ean
+;1000001;;871234567890\
+1
+
+#% impex.enableCodeExecution(true);
+"#%groovy% println 'hello from groovy'"
+REMOVE Unit;code[unique=true]
+;pack

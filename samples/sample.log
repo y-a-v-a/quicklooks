@@ -1,0 +1,15 @@
+2026-09-26T10:15:01,112 INFO  [main] Server startup in 5231 ms
+2026-09-26T10:15:02,004 DEBUG [pool-1] cache warmed: 1200 entries
+2026-09-26T10:15:03,510 WARN  [http-7] slow request "/api/products?page=3" took 2311 ms
+2026-09-26T10:15:04,771 ERROR [http-9] request failed
+java.lang.IllegalStateException: order 42 has no lines
+	at com.example.order.OrderService.place(OrderService.java:88)
+	at com.example.web.OrderController.submit(OrderController.java:41)
+Caused by: java.io.UncheckedIOException: connection reset
+	... 12 more
+2026-09-26T10:15:05,000 INFO  [batch] import done, 0 ERRORS, 0 WARNINGS
+Sep 26 10:15:06 host sshd[311]: Accepted publickey for deploy
+10.0.0.7 - - [26/Sep/2026:10:15:07 +0200] "GET /health HTTP/1.1" 200 2
+SEVERE: Servlet.service() for servlet [jsp] threw exception
+INFO   | jvm 1    | main    | 2026/09/26 10:15:08.318 | 2026-09-26T10:15:08,301 ERROR [hybrisHTTP5] wrapped by the service wrapper
+INFO   | jvm 1    | main    | 2026/09/26 10:15:08.320 | 	at de.hybris.platform.Foo.bar(Foo.java:1)

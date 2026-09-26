@@ -1,0 +1,11 @@
+package com.example.rules
+// line comment
+# old-style comment
+/* block
+   comment */
+rule "Free shipping over 100"
+    when
+        $o : Order( total > 100 )
+    then
+        $o.setShipping( 0 );
+end

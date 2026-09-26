@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!-- A comment with <key>markup</key> that must stay green,
+     spanning two lines. -->
+<dict>
+	<key>Label</key>
+	<string>nl.vincentbruijn.sample</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/sh</string>
+		<string>-c</string>
+		<string>test -f ~/.done &amp;&amp; echo "ok" &lt; /dev/null</string>
+	</array>
+	<key>Script</key>
+	<string><![CDATA[if [ "$a" < "$b" ]; then echo <string>; fi]]></string>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<false/>
+	<key>StartInterval</key>
+	<integer>3600</integer>
+	<key>Nice</key>
+	<real>-2.5</real>
+	<key>Updated</key>
+	<date>2026-09-26T12:00:00Z</date>
+	<key>Icon</key>
+	<data>
+	iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4
+	nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==
+	</data>
+	<key>Multi
+line key</key>
+	<string>Unicode: café, 日本語, emoji 🍺</string>
+	<key>Empty</key>
+	<dict/>
+</dict>
+</plist>
