@@ -139,23 +139,28 @@ links with `-e _NSExtensionMain` rather than `main` — the one part that is not
 plist wiring — and is ad-hoc signed with App Sandbox on. Nothing declares
 `CFBundleDocumentTypes`, so your editor stays the default opener.
 
-| File | Role |
+| Path | Role |
 | --- | --- |
 | `build-quicklooks.sh` | builds, signs and installs everything |
-| `DevQuickLookApp.swift` | the host app |
-| `PreviewStyle.swift` | shared palette and the `t()` append helper |
-| `TextPreviewController.swift` | scrolling monospace view, base class |
-| `JSONValue.swift` | order-preserving JSON parser and pretty-printer |
-| `XMLHighlighter.swift` | XML tokenizer shared by the plist and XML previewers |
-| `ByteReader.swift` | bounds-checked binary reads, and the report header |
-| `*Renderer.swift` | one per format: file bytes to attributed string |
-| `DotfileRenderer.swift` | text sniffing, and filename → renderer |
-| `*PreviewViewController.swift` | four-line subclass naming its renderer |
+| `Sources/App/` | the host app |
+| `Sources/Core/PreviewStyle.swift` | shared palette and the `t()` append helper |
+| `Sources/Core/TextPreviewController.swift` | scrolling monospace view, base class |
+| `Sources/Core/ByteReader.swift` | bounds-checked binary reads, and the report header |
+| `Sources/Formats/<Format>/` | one folder per format: its renderer and its controller |
+| `Sources/Formats/*/*Renderer.swift` | file bytes to attributed string |
+| `Sources/Formats/*/*PreviewViewController.swift` | four-line subclass naming its renderer |
+| `Sources/Formats/JSON/JSONValue.swift` | order-preserving JSON parser and pretty-printer |
+| `Sources/Formats/XML/XMLHighlighter.swift` | XML tokenizer shared by the plist, XML and ImpEx previewers |
+| `Sources/Formats/Dotfile/` | text sniffing, and filename → renderer |
 | `install-dev-utis.sh` | superseded, see below |
 
-Adding a format takes a renderer, a controller subclass and one line in the
-`EXTENSIONS` array. For an Xcode project instead, make one Quick Look Preview
-Extension target per format and copy the plist bodies out of that script.
+Every extension is compiled with the two `Core/` view files; the rest it lists
+itself in the `EXTENSIONS` array, by path relative to `Sources/`. Formats
+reuse each other's renderers, the dotfile previewer most of all, so a folder
+groups code by format, not by extension. Adding a format takes a folder with a
+renderer and a controller subclass, and one line in the `EXTENSIONS` array.
+For an Xcode project instead, make one Quick Look Preview Extension target per
+format and copy the plist bodies out of that script.
 
 ## The renderers
 
@@ -251,7 +256,7 @@ app now declares the JSONL type itself. If you have it installed, remove it:
 
 To preview another undeclared extension, add it to `CONFIG_EXTS` or
 `SOURCE_EXTS` in `build-quicklooks.sh` and, for highlighting, to
-`DotfileRenderer.swift`.
+`Sources/Formats/Dotfile/DotfileRenderer.swift`.
 
 ## Debugging
 

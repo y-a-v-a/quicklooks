@@ -39,34 +39,35 @@ APP_ID="nl.vincentbruijn.devquicklook"
 MIN_MACOS="13.0"
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SRC="$HERE/Sources"
 BUILD="$HERE/build"
 DEST="$HOME/Applications/${APP_NAME}.app"
 LEGACY="$HOME/Applications/JSONLPreview.app"   # pre-YAML layout
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 
-# name : bundle-id-suffix : comma-separated UTIs : sources
+# name : bundle-id-suffix : comma-separated UTIs : sources, relative to Sources/
 EXTENSIONS=(
-  "YAMLPreviewer:yaml:public.yaml:YAMLRenderer.swift YAMLPreviewViewController.swift"
-  "INIPreviewer:ini:com.microsoft.ini,public.toml:INIRenderer.swift INIPreviewViewController.swift"
-  "JSONPreviewer:json:public.json,nl.vincentbruijn.jsonc,nl.vincentbruijn.json5:JSONValue.swift JSONLRenderer.swift JSONCRenderer.swift JSONRenderer.swift JSONPreviewViewController.swift"
-  "JSONLPreviewer:jsonl:nl.vincentbruijn.jsonl:JSONValue.swift JSONLRenderer.swift JSONLPreviewViewController.swift"
-  "DockerfilePreviewer:dockerfile:nl.vincentbruijn.dockerfile:DockerfileRenderer.swift DockerfilePreviewViewController.swift"
-  "DotfilePreviewer:dotfile:public.data,nl.vincentbruijn.config-text,nl.vincentbruijn.source-text:DockerfileRenderer.swift INIRenderer.swift YAMLRenderer.swift JSONValue.swift JSONLRenderer.swift JSONCRenderer.swift JSONRenderer.swift PlainTextRenderer.swift SQLiteRenderer.swift DotfileRenderer.swift DotfilePreviewViewController.swift"
-  "SQLitePreviewer:sqlite:nl.vincentbruijn.sqlite:SQLiteRenderer.swift SQLitePreviewViewController.swift"
-  "PlistPreviewer:plist:com.apple.property-list,com.apple.xcode.entitlements-property-list,com.apple.xcode.app-privacy-property-list,com.apple.xcode.strings-dictionary:ByteReader.swift XMLHighlighter.swift PlistRenderer.swift PlistPreviewViewController.swift"
-  "XMLPreviewer:xml:public.xml,nl.vincentbruijn.xml-text:ByteReader.swift XMLHighlighter.swift XMLRenderer.swift XMLPreviewViewController.swift"
-  "ArchivePreviewer:archive:public.zip-archive,com.sun.java-archive,com.sun.web-application-archive,nl.vincentbruijn.ear,public.tar-archive,org.gnu.gnu-zip-tar-archive,org.gnu.gnu-zip-archive:ByteReader.swift ClassFileRenderer.swift ArchiveRenderer.swift ArchivePreviewViewController.swift"
-  "ImpexPreviewer:impex:nl.vincentbruijn.impex:ByteReader.swift XMLHighlighter.swift XMLRenderer.swift ImpexRenderer.swift ImpexPreviewViewController.swift"
-  "ClassFilePreviewer:classfile:com.sun.java-class:ByteReader.swift ClassFileRenderer.swift ClassFilePreviewViewController.swift"
-  "LogPreviewer:log:com.apple.log:ByteReader.swift LogRenderer.swift LogPreviewViewController.swift"
+  "YAMLPreviewer:yaml:public.yaml:Formats/YAML/YAMLRenderer.swift Formats/YAML/YAMLPreviewViewController.swift"
+  "INIPreviewer:ini:com.microsoft.ini,public.toml:Formats/INI/INIRenderer.swift Formats/INI/INIPreviewViewController.swift"
+  "JSONPreviewer:json:public.json,nl.vincentbruijn.jsonc,nl.vincentbruijn.json5:Formats/JSON/JSONValue.swift Formats/JSON/JSONLRenderer.swift Formats/JSON/JSONCRenderer.swift Formats/JSON/JSONRenderer.swift Formats/JSON/JSONPreviewViewController.swift"
+  "JSONLPreviewer:jsonl:nl.vincentbruijn.jsonl:Formats/JSON/JSONValue.swift Formats/JSON/JSONLRenderer.swift Formats/JSON/JSONLPreviewViewController.swift"
+  "DockerfilePreviewer:dockerfile:nl.vincentbruijn.dockerfile:Formats/Dockerfile/DockerfileRenderer.swift Formats/Dockerfile/DockerfilePreviewViewController.swift"
+  "DotfilePreviewer:dotfile:public.data,nl.vincentbruijn.config-text,nl.vincentbruijn.source-text:Formats/Dockerfile/DockerfileRenderer.swift Formats/INI/INIRenderer.swift Formats/YAML/YAMLRenderer.swift Formats/JSON/JSONValue.swift Formats/JSON/JSONLRenderer.swift Formats/JSON/JSONCRenderer.swift Formats/JSON/JSONRenderer.swift Formats/Dotfile/PlainTextRenderer.swift Formats/SQLite/SQLiteRenderer.swift Formats/Dotfile/DotfileRenderer.swift Formats/Dotfile/DotfilePreviewViewController.swift"
+  "SQLitePreviewer:sqlite:nl.vincentbruijn.sqlite:Formats/SQLite/SQLiteRenderer.swift Formats/SQLite/SQLitePreviewViewController.swift"
+  "PlistPreviewer:plist:com.apple.property-list,com.apple.xcode.entitlements-property-list,com.apple.xcode.app-privacy-property-list,com.apple.xcode.strings-dictionary:Core/ByteReader.swift Formats/XML/XMLHighlighter.swift Formats/Plist/PlistRenderer.swift Formats/Plist/PlistPreviewViewController.swift"
+  "XMLPreviewer:xml:public.xml,nl.vincentbruijn.xml-text:Core/ByteReader.swift Formats/XML/XMLHighlighter.swift Formats/XML/XMLRenderer.swift Formats/XML/XMLPreviewViewController.swift"
+  "ArchivePreviewer:archive:public.zip-archive,com.sun.java-archive,com.sun.web-application-archive,nl.vincentbruijn.ear,public.tar-archive,org.gnu.gnu-zip-tar-archive,org.gnu.gnu-zip-archive:Core/ByteReader.swift Formats/ClassFile/ClassFileRenderer.swift Formats/Archive/ArchiveRenderer.swift Formats/Archive/ArchivePreviewViewController.swift"
+  "ImpexPreviewer:impex:nl.vincentbruijn.impex:Core/ByteReader.swift Formats/XML/XMLHighlighter.swift Formats/XML/XMLRenderer.swift Formats/Impex/ImpexRenderer.swift Formats/Impex/ImpexPreviewViewController.swift"
+  "ClassFilePreviewer:classfile:com.sun.java-class:Core/ByteReader.swift Formats/ClassFile/ClassFileRenderer.swift Formats/ClassFile/ClassFilePreviewViewController.swift"
+  "LogPreviewer:log:com.apple.log:Core/ByteReader.swift Formats/Log/LogRenderer.swift Formats/Log/LogPreviewViewController.swift"
 )
-SHARED="PreviewStyle.swift TextPreviewController.swift"
+SHARED="Core/PreviewStyle.swift Core/TextPreviewController.swift"
 
 # Extensions nothing on macOS declares, so they resolve to dyn.* and reach no
 # previewer at all — not even a public.data claim. Declared below as two types
-# for DotfilePreviewer. Keep in sync with byExtension in DotfileRenderer.swift,
-# and check a new one resolves to dyn.* first: declaring an extension the
-# system already owns does nothing.
+# for DotfilePreviewer. Keep in sync with byExtension in
+# Sources/Formats/Dotfile/DotfileRenderer.swift, and check a new one resolves
+# to dyn.* first: declaring an extension the system already owns does nothing.
 CONFIG_EXTS="env envrc conf properties lock service socket timer mount target desktop
   gitconfig editorconfig npmrc gitignore gitattributes dockerignore tf tfvars hcl nomad"
 SOURCE_EXTS="go rs kt kts dart zig gradle groovy scala sc cs fsx jsx cjs v sv svh sol
@@ -130,7 +131,7 @@ for spec in "${EXTENSIONS[@]}"; do
     -framework Cocoa -framework Quartz -lsqlite3 \
     -Xlinker -e -Xlinker _NSExtensionMain \
     -o "$APPEX/Contents/MacOS/$EXT_NAME" \
-    $(for f in $SHARED $SOURCES; do echo "$HERE/$f"; done)
+    $(for f in $SHARED $SOURCES; do echo "$SRC/$f"; done)
 
   cat > "$APPEX/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -180,7 +181,7 @@ swiftc \
   -O \
   -framework Cocoa \
   -o "$APP/Contents/MacOS/$APP_NAME" \
-  "$HERE/DevQuickLookApp.swift"
+  "$SRC/App/DevQuickLookApp.swift"
 
 # An extension can only claim a type something on the system declares.
 # public.yaml is declared by macOS itself (CoreTypes.bundle), so only JSONL,
