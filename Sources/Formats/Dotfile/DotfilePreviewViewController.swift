@@ -6,6 +6,8 @@ final class PreviewViewController: TextPreviewController {
         try DotfileRenderer.render(url: url)
     }
 
-    /// Extensionless SQLite files, like Chrome's `History`, land here too.
-    override class func wrapsLines(for url: URL) -> Bool { !SQLiteRenderer.isSQLite(url) }
+    /// Extensionless SQLite files, like Chrome's `History`, and archives land here too.
+    override class func wrapsLines(for url: URL) -> Bool {
+        !SQLiteRenderer.isSQLite(url) && !ArchiveRenderer.isArchive(url)
+    }
 }

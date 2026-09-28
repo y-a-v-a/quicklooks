@@ -13,7 +13,7 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 | `.jsonc` `.json5` | `nl.vincentbruijn.jsonc`, `nl.vincentbruijn.json5` | `JSONPreviewer` | nothing |
 | `.jsonl` `.ndjson` | `nl.vincentbruijn.jsonl` | `JSONLPreviewer` | nothing |
 | `*.Dockerfile` `*.Containerfile` | `nl.vincentbruijn.dockerfile` | `DockerfilePreviewer` | nothing |
-| dotfiles, `Dockerfile`, `Brewfile` and other extensionless text | `public.data` | `DotfilePreviewer` | nothing |
+| dotfiles, `Dockerfile`, `Brewfile` and other extensionless text, SQLite and archives | `public.data` | `DotfilePreviewer` | nothing |
 | `.conf` `.env` `.tf` `.lock` `.properties` `.service` … | `nl.vincentbruijn.config-text` | `DotfilePreviewer` | nothing |
 | `.go` `.rs` `.kt` `.dart` `.zig` `.lua` `.nix` `.vue` `.vm` `.jsp` `.snap` `.http` `.drl` … | `nl.vincentbruijn.source-text` | `DotfilePreviewer` | nothing |
 | `.sqlite` `.sqlite3` `.db` `.db3` `.s3db` `.sl3` `.gpkg` `.mbtiles` | `nl.vincentbruijn.sqlite` | `SQLitePreviewer` | nothing |
@@ -98,7 +98,9 @@ MIME type, never on a filename. They resolve to `public.data`. So
 `DotfilePreviewer` claims `public.data` and checks the content: text if the
 first 8 KB has no NUL byte and decodes as UTF-8. The filename then picks the
 renderer. It also checks for SQLite's 16-byte magic header, so Chrome's
-`History` and other extensionless databases get the SQLite preview. Anything
+`History` and other extensionless databases get the SQLite preview, and for the
+leading bytes of a zip, gzip or tar, so an archive saved without its extension
+is listed like one. Anything
 else is thrown back, and Quick Look shows its usual icon view. A `dyn.*` type is *not* matched by a `public.data` claim, so
 `Dockerfile.prod` and other unlisted extensions still get nothing.
 

@@ -35,6 +35,17 @@ enum ArchiveRenderer {
         var comment: String?
     }
 
+    /// The leading bytes of a zip, empty zip, gzip or tar. A zip with a stub
+    /// in front, like a self-extractor, is missed, so that a file without an
+    /// archive extension never pays for a search of its end.
+    static func isArchive(_ url: URL) -> Bool {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return false }
+        defer { try? handle.close() }
+        guard let head = try? handle.read(upToCount: 512) else { return false }
+        return head.starts(with: [0x50, 0x4B, 3, 4]) || head.starts(with: [0x50, 0x4B, 5, 6])
+            || head.starts(with: [0x1F, 0x8B]) || Tar.isHeader(Array(head))
+    }
+
     static func render(url: URL, maxListed: Int = 1500, maxEntries: Int = 200_000,
                        budget: Double = 2.0) throws -> NSAttributedString {
         let deadline = CFAbsoluteTimeGetCurrent() + budget
