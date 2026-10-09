@@ -23,6 +23,8 @@
 #   ImpexPreviewer        nl.vincentbruijn.impex               .impex
 #   ClassFilePreviewer    com.sun.java-class                   .class
 #   LogPreviewer          com.apple.log                        .log
+#   FontPreviewer         nl.vincentbruijn.woff2,              .woff2 .woff
+#                         nl.vincentbruijn.woff
 #
 # No Xcode project: an app extension is a bundle with an Info.plist and a
 # binary, and swiftc produces both. The only non-obvious part is the entry
@@ -60,6 +62,7 @@ EXTENSIONS=(
   "ImpexPreviewer:impex:nl.vincentbruijn.impex:Core/ByteReader.swift Formats/XML/XMLHighlighter.swift Formats/XML/XMLRenderer.swift Formats/Impex/ImpexRenderer.swift Formats/Impex/ImpexPreviewViewController.swift"
   "ClassFilePreviewer:classfile:com.sun.java-class:Core/ByteReader.swift Formats/ClassFile/ClassFileRenderer.swift Formats/ClassFile/ClassFilePreviewViewController.swift"
   "LogPreviewer:log:com.apple.log:Core/ByteReader.swift Formats/Log/LogRenderer.swift Formats/Log/LogPreviewViewController.swift"
+  "FontPreviewer:font:nl.vincentbruijn.woff2,nl.vincentbruijn.woff:Core/ByteReader.swift Formats/Font/FontRenderer.swift Formats/Font/FontPreviewViewController.swift"
 )
 SHARED="Core/PreviewStyle.swift Core/TextPreviewController.swift"
 
@@ -185,9 +188,11 @@ swiftc \
 
 # An extension can only claim a type something on the system declares.
 # public.yaml is declared by macOS itself (CoreTypes.bundle), so only JSONL,
-# JSONC, JSON5, SQLite, *.Dockerfile, ImpEx, .ear, the XML dialects and the
-# dyn.* extensions need a
-# declaration here. Keep JSONL in sync
+# JSONC, JSON5, SQLite, *.Dockerfile, ImpEx, .ear, the XML dialects, WOFF and
+# WOFF2, and the dyn.* extensions need a
+# declaration here. The web fonts conform to public.data, not public.font:
+# Font Book opens public.font, so declaring that would make it the default
+# app for .woff2 files, and the system font previewer would compete for them. Keep JSONL in sync
 # with install-dev-utis.sh, and run that one with --no-jsonl so exactly one
 # bundle owns the type. Dotfiles and a bare Dockerfile have no extension to
 # declare; they resolve to public.data, which DotfilePreviewer claims and
@@ -416,6 +421,49 @@ $(ext_xml "$SOURCE_EXTS")
                 <key>public.filename-extension</key>
                 <array>
                     <string>ear</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>nl.vincentbruijn.woff2</string>
+            <key>UTTypeDescription</key>
+            <string>WOFF2 Web Font</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>woff2</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>font/woff2</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>nl.vincentbruijn.woff</string>
+            <key>UTTypeDescription</key>
+            <string>WOFF Web Font</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.data</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>woff</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>font/woff</string>
+                    <string>application/font-woff</string>
                 </array>
             </dict>
         </dict>

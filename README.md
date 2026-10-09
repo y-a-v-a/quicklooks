@@ -25,6 +25,7 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 | `.class` | `com.sun.java-class` | `ClassFilePreviewer` | icon only |
 | `.impex` | `nl.vincentbruijn.impex` | `ImpexPreviewer` | nothing |
 | `.log` | `com.apple.log` | `LogPreviewer` | plain built-in preview |
+| `.woff2` `.woff` | `nl.vincentbruijn.woff2`, `nl.vincentbruijn.woff` | `FontPreviewer` | nothing |
 
 Requires macOS 13 or later and Xcode's command line tools for `swiftc`.
 Developed and verified on macOS 26.5.
@@ -88,9 +89,11 @@ buffers and exports are often JSONL behind a `.json` name, so `JSONPreviewer`
 retries as JSONL when the whole-document parse fails and every line parses on
 its own.
 
-`.jsonc`, `.json5`, `.sqlite`, `app.Dockerfile` and a list of developer extensions
+`.jsonc`, `.json5`, `.sqlite`, `.woff2`, `app.Dockerfile` and a list of developer extensions
 (`.go`, `.conf`, `.tf`, …) are undeclared too, so the host app declares them.
 Undeclared, they resolve to `dyn.*` types that no previewer can reach.
+`.woff2` and `.woff` are declared as plain data, not as `public.font`: Font
+Book opens every `public.font`, so it would become their default app.
 
 Dotfiles cannot be declared at all. `.zshrc`, `.gitconfig` and a bare
 `Dockerfile` have no extension, and a type can only be matched on extension or
@@ -113,7 +116,7 @@ No Xcode project. An app extension is an `Info.plist` plus a binary, and
 ~/Applications/DevQuickLook.app
   Contents/Info.plist                    UTImportedTypeDeclarations for jsonl,
                                          jsonc, json5, sqlite, dockerfile, config, source,
-                                         xml-text, impex, ear
+                                         xml-text, impex, ear, woff2, woff
   Contents/MacOS/DevQuickLook            host app, does nothing
   Contents/PlugIns/YAMLPreviewer.appex   claims public.yaml
   Contents/PlugIns/INIPreviewer.appex    claims com.microsoft.ini, public.toml
@@ -132,6 +135,7 @@ No Xcode project. An app extension is an `Info.plist` plus a binary, and
                                          claims com.sun.java-class
   Contents/PlugIns/ImpexPreviewer.appex  claims nl.vincentbruijn.impex
   Contents/PlugIns/LogPreviewer.appex    claims com.apple.log
+  Contents/PlugIns/FontPreviewer.appex   claims nl.vincentbruijn.woff2, woff
 ```
 
 The host app exists only because an extension must ship inside an app, and a
@@ -237,6 +241,17 @@ that is where the recent lines are. The first level word on a line (`ERROR`,
 exception names and stack frames are picked out. The Java Service Wrapper
 prefix that Hybris console logs carry (`INFO | jvm 1 | main | … |`) is dimmed,
 and the level after it is used. A `.log` that is binary shows metadata only.
+
+**Web fonts**, WOFF2 and WOFF, are drawn in their own typeface: the name, the
+alphabet, digits and punctuation, a pangram from 12 to 72 points, and the first
+2,000 characters the font maps, each with its code point. CoreText unpacks both
+formats and nothing is installed. Only characters the font maps are drawn in
+it, never borrowed from a system font, so a subset lists what each alphabet row
+lacks and an icon font shows its icons with their Private Use Area code points.
+A variable font is shown at its default, then each named instance, up to 40,
+drawn in itself beside its axis values; a collection lists its fonts the same
+way. The copyright, designer and license strings come last. `.ttf` and `.otf`
+keep the built-in preview.
 
 **SQLite** shows the header metadata, then every table with its row count, and
 columns, indexes and 10 rows for the first 20. The database is opened
