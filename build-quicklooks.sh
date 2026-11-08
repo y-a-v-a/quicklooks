@@ -11,9 +11,11 @@
 #   DockerfilePreviewer   nl.vincentbruijn.dockerfile          *.Dockerfile *.Containerfile
 #   DotfilePreviewer      public.data,                         .zshrc .gitconfig Dockerfile,
 #                         nl.vincentbruijn.config-text,        .conf .env .go .rs .tf …
-#                         nl.vincentbruijn.source-text,        .py .sql
+#                         nl.vincentbruijn.source-text,        .py .sql .php .js
 #                         public.python-script, Sequel Ace's
-#                         com.sequel-ace.sequel-ace.sql
+#                         com.sequel-ace.sequel-ace.sql,
+#                         public.php-script,
+#                         com.netscape.javascript-source
 #   SQLitePreviewer       nl.vincentbruijn.sqlite              .sqlite .sqlite3 .db .db3 .s3db
 #                                                              .sl3 .gpkg .mbtiles
 #   PlistPreviewer        com.apple.property-list and the      .plist .entitlements .xcprivacy
@@ -57,7 +59,7 @@ EXTENSIONS=(
   "JSONPreviewer:json:public.json,nl.vincentbruijn.jsonc,nl.vincentbruijn.json5:Formats/JSON/JSONValue.swift Formats/JSON/JSONLRenderer.swift Formats/JSON/JSONCRenderer.swift Formats/JSON/JSONRenderer.swift Formats/JSON/JSONPreviewViewController.swift"
   "JSONLPreviewer:jsonl:nl.vincentbruijn.jsonl:Formats/JSON/JSONValue.swift Formats/JSON/JSONLRenderer.swift Formats/JSON/JSONLPreviewViewController.swift"
   "DockerfilePreviewer:dockerfile:nl.vincentbruijn.dockerfile:Formats/Dockerfile/DockerfileRenderer.swift Formats/Dockerfile/DockerfilePreviewViewController.swift"
-  "DotfilePreviewer:dotfile:public.data,nl.vincentbruijn.config-text,nl.vincentbruijn.source-text,public.python-script,com.sequel-ace.sequel-ace.sql:Formats/Dockerfile/DockerfileRenderer.swift Formats/INI/INIRenderer.swift Formats/YAML/YAMLRenderer.swift Formats/JSON/JSONValue.swift Formats/JSON/JSONLRenderer.swift Formats/JSON/JSONCRenderer.swift Formats/JSON/JSONRenderer.swift Formats/Dotfile/PlainTextRenderer.swift Formats/SQLite/SQLiteRenderer.swift Core/ByteReader.swift Formats/ClassFile/ClassFileRenderer.swift Formats/Archive/ArchiveRenderer.swift Formats/Dotfile/DotfileRenderer.swift Formats/Dotfile/DotfilePreviewViewController.swift"
+  "DotfilePreviewer:dotfile:public.data,nl.vincentbruijn.config-text,nl.vincentbruijn.source-text,public.python-script,com.sequel-ace.sequel-ace.sql,public.php-script,com.netscape.javascript-source:Formats/Dockerfile/DockerfileRenderer.swift Formats/INI/INIRenderer.swift Formats/YAML/YAMLRenderer.swift Formats/JSON/JSONValue.swift Formats/JSON/JSONLRenderer.swift Formats/JSON/JSONCRenderer.swift Formats/JSON/JSONRenderer.swift Formats/Dotfile/PlainTextRenderer.swift Formats/Dotfile/Languages.swift Formats/Dotfile/CodeReflow.swift Formats/SQLite/SQLiteRenderer.swift Core/ByteReader.swift Formats/ClassFile/ClassFileRenderer.swift Formats/Archive/ArchiveRenderer.swift Formats/Dotfile/DotfileRenderer.swift Formats/Dotfile/DotfilePreviewViewController.swift"
   "SQLitePreviewer:sqlite:nl.vincentbruijn.sqlite:Formats/SQLite/SQLiteRenderer.swift Formats/SQLite/SQLitePreviewViewController.swift"
   "PlistPreviewer:plist:com.apple.property-list,com.apple.xcode.entitlements-property-list,com.apple.xcode.app-privacy-property-list,com.apple.xcode.strings-dictionary:Core/ByteReader.swift Formats/XML/XMLHighlighter.swift Formats/Plist/PlistRenderer.swift Formats/Plist/PlistPreviewViewController.swift"
   "XMLPreviewer:xml:public.xml,nl.vincentbruijn.xml-text:Core/ByteReader.swift Formats/XML/XMLHighlighter.swift Formats/XML/XMLRenderer.swift Formats/XML/XMLPreviewViewController.swift"
@@ -66,7 +68,7 @@ EXTENSIONS=(
   "ClassFilePreviewer:classfile:com.sun.java-class:Core/ByteReader.swift Formats/ClassFile/ClassFileRenderer.swift Formats/ClassFile/ClassFilePreviewViewController.swift"
   "LogPreviewer:log:com.apple.log:Core/ByteReader.swift Formats/Log/LogRenderer.swift Formats/Log/LogPreviewViewController.swift"
   "FontPreviewer:font:nl.vincentbruijn.woff2,nl.vincentbruijn.woff:Core/ByteReader.swift Formats/Font/FontRenderer.swift Formats/Font/FontPreviewViewController.swift"
-  "MarkdownPreviewer:markdown:net.daringfireball.markdown:Core/ByteReader.swift Formats/Dotfile/PlainTextRenderer.swift Formats/Markdown/MarkdownStyle.swift Formats/Markdown/MarkdownCode.swift Formats/Markdown/MarkdownRenderer.swift Formats/Markdown/MarkdownSourceRenderer.swift Formats/Markdown/MarkdownPreviewViewController.swift"
+  "MarkdownPreviewer:markdown:net.daringfireball.markdown:Core/ByteReader.swift Formats/Dotfile/PlainTextRenderer.swift Formats/Dotfile/Languages.swift Formats/Dotfile/CodeReflow.swift Formats/Markdown/MarkdownStyle.swift Formats/Markdown/MarkdownCode.swift Formats/Markdown/MarkdownRenderer.swift Formats/Markdown/MarkdownSourceRenderer.swift Formats/Markdown/MarkdownPreviewViewController.swift"
 )
 SHARED="Core/PreviewStyle.swift Core/TextPreviewController.swift"
 

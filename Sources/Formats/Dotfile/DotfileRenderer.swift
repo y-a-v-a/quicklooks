@@ -118,7 +118,8 @@ enum DotfileRenderer {
 
     /// Unknown extensions resolve to `dyn.*`, which a `public.data` claim does
     /// not reach, so each of these also needs a declaration in the host app.
-    /// `.py` and `.sql` are declared elsewhere and claimed by type instead.
+    /// `.py`, `.sql`, `.js` and `.php` are declared elsewhere and claimed by
+    /// type instead.
     /// Keep in sync with CONFIG_EXTS and SOURCE_EXTS in build-quicklooks.sh.
     private static let byExtension: [String: Kind] = {
         var map: [String: Kind] = [:]
@@ -133,7 +134,7 @@ enum DotfileRenderer {
             map[e] = .text(.hash)
         }
         for e in ["go", "rs", "kt", "kts", "dart", "zig", "gradle", "groovy", "scala", "sc", "cs",
-                  "fsx", "jsx", "cjs", "v", "sv", "svh", "sol", "prisma", "cue", "scss", "less",
+                  "fsx", "v", "sv", "svh", "sol", "prisma", "cue", "scss", "less",
                   "styl", "hx", "vala", "wgsl", "cu", "ino", "jsonnet", "libsonnet"] {
             map[e] = .text(.cLike)
         }
@@ -144,6 +145,8 @@ enum DotfileRenderer {
         }
         map["vim"] = .text(.vim)
         for e in ["py", "pyw", "pyi"] { map[e] = .text(.python) }
+        for e in ["js", "mjs", "cjs", "jsx"] { map[e] = .text(.javascript) }
+        for e in ["php", "phtml"] { map[e] = .text(.php) }
         map["sql"] = .text(.sql)
         map["snap"] = .text(.cLike)                                   // Jest snapshots are JavaScript
         map["drl"] = .text(PlainTextRenderer.Syntax(lineComments: ["//", "#"], blockComment: ("/*", "*/"),

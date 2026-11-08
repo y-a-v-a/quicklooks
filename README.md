@@ -18,6 +18,8 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 | `.go` `.rs` `.kt` `.dart` `.zig` `.lua` `.nix` `.vue` `.vm` `.jsp` `.snap` `.http` `.drl` … | `nl.vincentbruijn.source-text` | `DotfilePreviewer` | nothing |
 | `.py` | `public.python-script` | `DotfilePreviewer` | plain built-in preview |
 | `.sql` | Sequel Ace's `com.sequel-ace.sequel-ace.sql`, else `nl.vincentbruijn.source-text` | `DotfilePreviewer` | plain built-in preview, or nothing |
+| `.php` `.phtml` | `public.php-script` | `DotfilePreviewer` | plain built-in preview |
+| `.js` `.mjs` | `com.netscape.javascript-source` | `DotfilePreviewer` | plain built-in preview |
 | `.sqlite` `.sqlite3` `.db` `.db3` `.s3db` `.sl3` `.gpkg` `.mbtiles` | `nl.vincentbruijn.sqlite` | `SQLitePreviewer` | nothing |
 | `.plist` `.entitlements` `.xcprivacy` `.stringsdict` | `com.apple.property-list` and its Xcode subtypes | `PlistPreviewer` | plain built-in preview |
 | `.xml` | `public.xml` | `XMLPreviewer` | plain built-in preview |
@@ -197,7 +199,10 @@ BuildKit heredocs (`RUN <<EOF`), whose bodies are literal, and the
 `# escape=` directive.
 
 **Dotfiles** reuse these by name — `.gitconfig` is INI — or get comments and
-strings highlighted.
+strings highlighted. Python, SQL, PHP and JavaScript also get their keywords.
+Minified JavaScript, with a line over 5,000 characters, gets line breaks after
+`;`, `{` and `}` first, like minified XML, with strings, comments and regex
+literals left whole; the header says so.
 
 **Property lists** are XML, so they are highlighted like markup, with the text
 inside `<key>`, `<string>`, `<integer>`, `<real>` and `<date>` coloured by

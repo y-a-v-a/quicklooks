@@ -23,6 +23,9 @@ enum PlainTextRenderer {
         /// Letters that may sit right before a quote and still open a string:
         /// Python's `f"…"`, `r'…'`, `rb"…"`.
         var stringPrefixes: Set<Character> = []
+        /// Minified code (a line over 5,000 characters) gets line breaks
+        /// first, like the XML previewer does: see CodeReflow.
+        var reflowsMinified = false
 
         /// No colour at all, just the gutter. For text we know nothing about.
         static let plain = Syntax()
@@ -49,32 +52,6 @@ enum PlainTextRenderer {
         static let semicolon = Syntax(lineComments: [";"], quotes: ["\""])
 
         static let vim = Syntax(lineComments: ["\""], quotes: ["'", "\""], commentsOnlyAtLineStart: true)
-
-        /// `"""` docstrings are taken as a block, so one spanning lines is
-        /// coloured as a unit; `'''` ones are rare and stay per line.
-        static let python = Syntax(
-            lineComments: ["#"], blockComment: ("\"\"\"", "\"\"\""), quotes: ["\"", "'"],
-            keywords: ["def", "class", "return", "if", "elif", "else", "for", "while", "in", "not",
-                       "and", "or", "is", "import", "from", "as", "with", "try", "except", "finally",
-                       "raise", "lambda", "yield", "pass", "break", "continue", "global", "nonlocal",
-                       "None", "True", "False", "async", "await", "assert", "del", "match", "case",
-                       "self", "cls"],
-            stringPrefixes: ["f", "r", "b", "u", "F", "R", "B", "U"])
-
-        /// Keywords in upper and lower case, the two ways SQL is written.
-        static let sql: Syntax = {
-            let words = ["select", "from", "where", "and", "or", "not", "insert", "into", "values",
-                         "update", "set", "delete", "create", "table", "drop", "alter", "add", "index",
-                         "primary", "key", "foreign", "references", "join", "left", "right", "inner",
-                         "outer", "on", "as", "group", "by", "order", "having", "limit", "offset",
-                         "distinct", "null", "is", "in", "like", "between", "case", "when", "then",
-                         "else", "end", "union", "all", "exists", "default", "unique", "view", "begin",
-                         "commit", "rollback", "pragma", "with", "without", "rowid", "integer", "text",
-                         "real", "blob", "check", "constraint", "virtual", "using", "trigger",
-                         "if", "replace", "returning", "generated", "always", "stored", "autoincrement"]
-            return Syntax(lineComments: ["--"], blockComment: ("/*", "*/"), quotes: ["'", "\""],
-                          keywords: Set(words + words.map { $0.uppercased() }))
-        }()
     }
 
     /// Reads at most `maxBytes` and renders at most `maxLines` lines.
@@ -89,6 +66,8 @@ enum PlainTextRenderer {
 
         var text = String(decoding: data, as: UTF8.self)
         if truncated, let cut = text.lastIndex(of: "\n") { text = String(text[..<cut]) }
+        let minified = syntax.reflowsMinified && CodeReflow.isMinified(text)
+        if minified { text = CodeReflow.reflow(text, maxLines: maxLines) }
 
         var lines = text.components(separatedBy: "\n")
         if lines.last == "" { lines.removeLast() }
@@ -114,6 +93,7 @@ enum PlainTextRenderer {
         if let totalBytes {
             header.t("  \u{2022}  \(ByteCountFormatter.string(fromByteCount: Int64(totalBytes), countStyle: .file))", PreviewStyle.dim)
         }
+        if minified { header.t("  \u{2022}  minified, line breaks added", PreviewStyle.dim) }
         header.t(truncated ? "  \u{2022}  truncated\n\n" : "\n\n", PreviewStyle.dim)
 
         header.append(body)

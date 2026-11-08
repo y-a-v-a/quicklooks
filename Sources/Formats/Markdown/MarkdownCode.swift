@@ -66,10 +66,7 @@ enum MarkdownCode {
             + "continue struct class enum protocol extension import init deinit self Self throws throw rethrows try "
             + "catch do async await static private public internal fileprivate open final override mutating some "
             + "any where nil true false defer as is typealias associatedtype inout lazy weak unowned get set willSet didSet")))
-        add("js javascript jsx mjs cjs ts typescript tsx", c(words("const let var function return if else for "
-            + "while do switch case default break continue new class extends import export from as async await try "
-            + "catch finally throw typeof instanceof in of this super null undefined true false interface type enum "
-            + "implements public private protected readonly yield void delete static get set")))
+        add("js javascript jsx mjs cjs ts typescript tsx", .javascript)
         add("go golang", c(words("func package import var const type struct interface map chan go defer return "
             + "if else for range switch case default break continue select fallthrough goto nil true false")))
         add("rust rs", c(words("fn let mut pub use mod struct enum impl trait for in if else match loop while "
@@ -79,7 +76,8 @@ enum MarkdownCode {
             + "private protected internal static final abstract void return if else for while do new try catch "
             + "finally throw throws import package this super null true false enum switch case default break "
             + "continue fun val var when object is in as override data sealed namespace using")))
-        add("c h cpp c++ cc hpp objc objective-c php", c(words(cKeywords)))
+        add("c h cpp c++ cc hpp objc objective-c", c(words(cKeywords)))
+        add("php", .php)
         add("css scss less", Syntax(lineComments: ["//"], blockComment: ("/*", "*/"), quotes: ["\"", "'"]))
         add("json jsonc json5", Syntax(lineComments: ["//"], blockComment: ("/*", "*/"), quotes: ["\""],
                                        keywords: words("true false null")))
