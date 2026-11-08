@@ -126,7 +126,11 @@ for spec in "${EXTENSIONS[@]}"; do
     UTI_XML="${UTI_XML}                <string>${uti}</string>"$'\n'
   done < <(tr ',' '\n' <<< "$UTIS")
 
+  # An array, so a checkout path with spaces stays one argument per file.
+  FILES=()
   # shellcheck disable=SC2086
+  for f in $SHARED $SOURCES; do FILES+=("$SRC/$f"); done
+
   swiftc \
     -target "$TARGET" \
     -module-name "$EXT_NAME" \
@@ -134,7 +138,7 @@ for spec in "${EXTENSIONS[@]}"; do
     -framework Cocoa -framework Quartz -lsqlite3 \
     -Xlinker -e -Xlinker _NSExtensionMain \
     -o "$APPEX/Contents/MacOS/$EXT_NAME" \
-    $(for f in $SHARED $SOURCES; do echo "$SRC/$f"; done)
+    "${FILES[@]}"
 
   cat > "$APPEX/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
