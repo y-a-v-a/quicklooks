@@ -26,6 +26,7 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 | `.impex` | `nl.vincentbruijn.impex` | `ImpexPreviewer` | nothing |
 | `.log` | `com.apple.log` | `LogPreviewer` | plain built-in preview |
 | `.woff2` `.woff` | `nl.vincentbruijn.woff2`, `nl.vincentbruijn.woff` | `FontPreviewer` | nothing |
+| `.md` `.markdown` | `net.daringfireball.markdown` | `MarkdownPreviewer` | plain built-in preview |
 
 Requires macOS 13 or later and Xcode's command line tools for `swiftc`.
 Developed and verified on macOS 26.5.
@@ -136,6 +137,8 @@ No Xcode project. An app extension is an `Info.plist` plus a binary, and
   Contents/PlugIns/ImpexPreviewer.appex  claims nl.vincentbruijn.impex
   Contents/PlugIns/LogPreviewer.appex    claims com.apple.log
   Contents/PlugIns/FontPreviewer.appex   claims nl.vincentbruijn.woff2, woff
+  Contents/PlugIns/MarkdownPreviewer.appex
+                                         claims net.daringfireball.markdown
 ```
 
 The host app exists only because an extension must ship inside an app, and a
@@ -252,6 +255,28 @@ A variable font is shown at its default, then each named instance, up to 40,
 drawn in itself beside its axis values; a collection lists its fonts the same
 way. The copyright, designer and license strings come last. `.ttf` and `.otf`
 keep the built-in preview.
+
+**Markdown** is rendered rather than coloured: headings (H1 and H2 with a
+dotted rule), bold, italic, strikethrough, links, nested lists, task lists
+(`- [ ]` and `- [x]` as boxes), quotes, GitHub tables with their column
+alignment, and horizontal rules. Code, inline and fenced, is green monospace on
+a light-green background with rounded corners. A fenced block with a language
+tag (`swift`, `js`/`ts`, `python`, `go`, `rust`, `java`/`kotlin`, `c`/`cpp`,
+`ruby`, `sql`, `sh`, `json`, `yaml`, `css`, `html`, `dockerfile`, `lua`, …)
+gets its comments, strings, numbers and keywords coloured by the same shallow
+scanner as the dotfile previewer. Foundation's own CommonMark parser does the parsing,
+so there is no dependency. YAML front matter is shown at the top as a grey
+block, images as their alt text (a preview cannot load them), and raw HTML as
+dimmed source. The first 2 MB is shown. Light and dark mode each have their own
+colours. Other apps can ship a Markdown previewer too; if one of them wins,
+turn it off under System Settings → General → Login Items & Extensions →
+Quick Look.
+
+A **Preview | Source** switch in the top-right corner shows the Markdown
+source instead: line-numbered and coloured like the other previewers, with
+heading markers, emphasis, code spans, links, list and quote markers, tables,
+front matter and HTML picked out, and fenced code coloured by its language
+tag. Every file opens in Preview.
 
 **SQLite** shows the header metadata, then every table with its row count, and
 columns, indexes and 10 rows for the first 20. The database is opened
