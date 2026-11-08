@@ -11,6 +11,9 @@ literal, and a comment inside a `RUN` continuation.
 `sample.json5` is highlighted unvalidated. The dotfiles check routing by name:
 `.gitconfig` renders as INI, `.prettierrc` as JSONC, `.zshrc` and `.vimrc` with
 their own comment styles. `.binaryrc` is binary and should get the icon view.
+`sample.cfg` is a configparser `setup.cfg`: macOS types `.cfg` as TOML, but it
+must keep INI rules, so `;` and `#` inside a value are not comments, `version:`
+splits on its colon and `C:\tmp` does not.
 `sample.sqlite` is built from `sample.sql` (`sqlite3 sample.sqlite < sample.sql`)
 and holds a quoted table name, a `WITHOUT ROWID` table, an FTS5 table whose
 storage tables should fold away, generated and foreign-key columns, blobs,
