@@ -118,6 +118,7 @@ enum DotfileRenderer {
 
     /// Unknown extensions resolve to `dyn.*`, which a `public.data` claim does
     /// not reach, so each of these also needs a declaration in the host app.
+    /// `.py` and `.sql` are declared elsewhere and claimed by type instead.
     /// Keep in sync with CONFIG_EXTS and SOURCE_EXTS in build-quicklooks.sh.
     private static let byExtension: [String: Kind] = {
         var map: [String: Kind] = [:]
@@ -142,6 +143,8 @@ enum DotfileRenderer {
             map[e] = .text(.semicolon)
         }
         map["vim"] = .text(.vim)
+        for e in ["py", "pyw", "pyi"] { map[e] = .text(.python) }
+        map["sql"] = .text(.sql)
         map["snap"] = .text(.cLike)                                   // Jest snapshots are JavaScript
         map["drl"] = .text(PlainTextRenderer.Syntax(lineComments: ["//", "#"], blockComment: ("/*", "*/"),
                                                     quotes: ["\""]))

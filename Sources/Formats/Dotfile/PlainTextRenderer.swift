@@ -20,6 +20,9 @@ enum PlainTextRenderer {
         var variables = false
         var assignments = false
         var keywords: Set<String> = []
+        /// Letters that may sit right before a quote and still open a string:
+        /// Python's `f"…"`, `r'…'`, `rb"…"`.
+        var stringPrefixes: Set<Character> = []
 
         /// No colour at all, just the gutter. For text we know nothing about.
         static let plain = Syntax()
@@ -46,6 +49,32 @@ enum PlainTextRenderer {
         static let semicolon = Syntax(lineComments: [";"], quotes: ["\""])
 
         static let vim = Syntax(lineComments: ["\""], quotes: ["'", "\""], commentsOnlyAtLineStart: true)
+
+        /// `"""` docstrings are taken as a block, so one spanning lines is
+        /// coloured as a unit; `'''` ones are rare and stay per line.
+        static let python = Syntax(
+            lineComments: ["#"], blockComment: ("\"\"\"", "\"\"\""), quotes: ["\"", "'"],
+            keywords: ["def", "class", "return", "if", "elif", "else", "for", "while", "in", "not",
+                       "and", "or", "is", "import", "from", "as", "with", "try", "except", "finally",
+                       "raise", "lambda", "yield", "pass", "break", "continue", "global", "nonlocal",
+                       "None", "True", "False", "async", "await", "assert", "del", "match", "case",
+                       "self", "cls"],
+            stringPrefixes: ["f", "r", "b", "u", "F", "R", "B", "U"])
+
+        /// Keywords in upper and lower case, the two ways SQL is written.
+        static let sql: Syntax = {
+            let words = ["select", "from", "where", "and", "or", "not", "insert", "into", "values",
+                         "update", "set", "delete", "create", "table", "drop", "alter", "add", "index",
+                         "primary", "key", "foreign", "references", "join", "left", "right", "inner",
+                         "outer", "on", "as", "group", "by", "order", "having", "limit", "offset",
+                         "distinct", "null", "is", "in", "like", "between", "case", "when", "then",
+                         "else", "end", "union", "all", "exists", "default", "unique", "view", "begin",
+                         "commit", "rollback", "pragma", "with", "without", "rowid", "integer", "text",
+                         "real", "blob", "check", "constraint", "virtual", "using", "trigger",
+                         "if", "replace", "returning", "generated", "always", "stored", "autoincrement"]
+            return Syntax(lineComments: ["--"], blockComment: ("/*", "*/"), quotes: ["'", "\""],
+                          keywords: Set(words + words.map { $0.uppercased() }))
+        }()
     }
 
     /// Reads at most `maxBytes` and renders at most `maxLines` lines.
@@ -156,7 +185,7 @@ enum PlainTextRenderer {
                 i = end
                 continue
             }
-            if syntax.quotes.contains(ch), opensString(c, at: i), let end = endOfQuoted(c, from: i) {
+            if syntax.quotes.contains(ch), opensString(c, at: i, syntax), let end = endOfQuoted(c, from: i) {
                 flush()
                 out.t(String(c[i..<end]), PreviewStyle.string)
                 i = end
@@ -206,9 +235,12 @@ enum PlainTextRenderer {
     }
 
     /// A quote opens a string only where a word could start, so the
-    /// apostrophe in `don't` in a comment-less `.gitignore` stays plain.
-    private static func opensString(_ c: [Character], at i: Int) -> Bool {
-        i == 0 || !(c[i - 1].isLetter || c[i - 1].isNumber)
+    /// apostrophe in `don't` in a comment-less `.gitignore` stays plain. Up to
+    /// two of the syntax's string prefixes may come first, as in `rb"…"`.
+    private static func opensString(_ c: [Character], at i: Int, _ syntax: Syntax) -> Bool {
+        var start = i
+        while start > 0, i - start < 2, syntax.stringPrefixes.contains(c[start - 1]) { start -= 1 }
+        return start == 0 || !(c[start - 1].isLetter || c[start - 1].isNumber)
     }
 
     /// Index just past the closing quote, or nil if the line never closes it —

@@ -16,6 +16,8 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 | dotfiles, `Dockerfile`, `Brewfile` and other extensionless text, SQLite and archives | `public.data` | `DotfilePreviewer` | nothing |
 | `.conf` `.env` `.tf` `.lock` `.properties` `.service` … | `nl.vincentbruijn.config-text` | `DotfilePreviewer` | nothing |
 | `.go` `.rs` `.kt` `.dart` `.zig` `.lua` `.nix` `.vue` `.vm` `.jsp` `.snap` `.http` `.drl` … | `nl.vincentbruijn.source-text` | `DotfilePreviewer` | nothing |
+| `.py` | `public.python-script` | `DotfilePreviewer` | plain built-in preview |
+| `.sql` | Sequel Ace's `com.sequel-ace.sequel-ace.sql`, else `nl.vincentbruijn.source-text` | `DotfilePreviewer` | plain built-in preview, or nothing |
 | `.sqlite` `.sqlite3` `.db` `.db3` `.s3db` `.sl3` `.gpkg` `.mbtiles` | `nl.vincentbruijn.sqlite` | `SQLitePreviewer` | nothing |
 | `.plist` `.entitlements` `.xcprivacy` `.stringsdict` | `com.apple.property-list` and its Xcode subtypes | `PlistPreviewer` | plain built-in preview |
 | `.xml` | `public.xml` | `XMLPreviewer` | plain built-in preview |

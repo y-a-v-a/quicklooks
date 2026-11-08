@@ -51,12 +51,6 @@ enum MarkdownCode {
 
     private static func words(_ s: String) -> Set<String> { Set(s.split(separator: " ").map(String.init)) }
 
-    /// SQL is written in either case.
-    private static func anyCase(_ s: String) -> Set<String> {
-        let w = words(s)
-        return w.union(w.map { $0.uppercased() })
-    }
-
     private static let cKeywords = "if else for while do switch case default break continue return goto struct "
         + "union enum typedef sizeof static const extern void int char short long float double unsigned signed "
         + "bool true false NULL nullptr class public private protected virtual new delete this namespace using "
@@ -89,9 +83,7 @@ enum MarkdownCode {
         add("css scss less", Syntax(lineComments: ["//"], blockComment: ("/*", "*/"), quotes: ["\"", "'"]))
         add("json jsonc json5", Syntax(lineComments: ["//"], blockComment: ("/*", "*/"), quotes: ["\""],
                                        keywords: words("true false null")))
-        add("python py", Syntax(lineComments: ["#"], quotes: ["\"", "'"], keywords: words("def class return if "
-            + "elif else for while in not and or is import from as with try except finally raise lambda yield "
-            + "pass break continue global nonlocal None True False async await assert del match case self")))
+        add("python py", .python)
         add("ruby rb", Syntax(lineComments: ["#"], quotes: ["\"", "'"], keywords: words("def end class module "
             + "if elsif else unless while until do return yield require nil true false self begin rescue ensure "
             + "then case when")))
@@ -100,11 +92,7 @@ enum MarkdownCode {
         add("dockerfile docker containerfile", Syntax(lineComments: ["#"], quotes: ["\"", "'"],
             keywords: words("FROM RUN CMD COPY ADD ENV ARG WORKDIR EXPOSE ENTRYPOINT USER VOLUME LABEL "
                 + "HEALTHCHECK SHELL ONBUILD STOPSIGNAL AS")))
-        add("sql mysql postgresql postgres sqlite plsql", Syntax(lineComments: ["--"], blockComment: ("/*", "*/"),
-            quotes: ["'", "\""], keywords: anyCase("select from where and or not insert into values update set "
-                + "delete create table drop alter add index primary key foreign references join left right inner "
-                + "outer on as group by order having limit offset distinct null is in like between case when then "
-                + "else end union all exists default unique view begin commit rollback")))
+        add("sql mysql postgresql postgres sqlite plsql", .sql)
         add("html xml svg xhtml plist", Syntax(blockComment: ("<!--", "-->"), quotes: ["\"", "'"]))
         add("lua", Syntax(lineComments: ["--"], quotes: ["\"", "'"], keywords: words("local function end if "
             + "then else elseif for in do while repeat until return nil true false and or not")))
