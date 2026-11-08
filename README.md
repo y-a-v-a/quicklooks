@@ -185,7 +185,8 @@ JSONC, like `tsconfig.json`, is shown as written, comments kept.
 **YAML** and **INI/TOML** highlight rather than parse, so half-written files
 degrade one line at a time and keep their layout. INI and TOML share a lexer
 but split on inline comments — in INI, `path = C:\tmp ; note` is all value — so
-the dialect comes from the extension.
+the dialect comes from the extension. A `.config` that starts with `<`, like
+.NET's `web.config`, is XML despite its TOML type and gets the XML preview.
 
 **Dockerfile** is highlighted the same way. It follows backslash continuations,
 BuildKit heredocs (`RUN <<EOF`), whose bodies are literal, and the

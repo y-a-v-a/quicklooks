@@ -50,7 +50,7 @@ LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchS
 # name : bundle-id-suffix : comma-separated UTIs : sources, relative to Sources/
 EXTENSIONS=(
   "YAMLPreviewer:yaml:public.yaml:Formats/YAML/YAMLRenderer.swift Formats/YAML/YAMLPreviewViewController.swift"
-  "INIPreviewer:ini:com.microsoft.ini,public.toml:Formats/INI/INIRenderer.swift Formats/INI/INIPreviewViewController.swift"
+  "INIPreviewer:ini:com.microsoft.ini,public.toml:Core/ByteReader.swift Formats/XML/XMLHighlighter.swift Formats/XML/XMLRenderer.swift Formats/INI/INIRenderer.swift Formats/INI/INIPreviewViewController.swift"
   "JSONPreviewer:json:public.json,nl.vincentbruijn.jsonc,nl.vincentbruijn.json5:Formats/JSON/JSONValue.swift Formats/JSON/JSONLRenderer.swift Formats/JSON/JSONCRenderer.swift Formats/JSON/JSONRenderer.swift Formats/JSON/JSONPreviewViewController.swift"
   "JSONLPreviewer:jsonl:nl.vincentbruijn.jsonl:Formats/JSON/JSONValue.swift Formats/JSON/JSONLRenderer.swift Formats/JSON/JSONLPreviewViewController.swift"
   "DockerfilePreviewer:dockerfile:nl.vincentbruijn.dockerfile:Formats/Dockerfile/DockerfileRenderer.swift Formats/Dockerfile/DockerfilePreviewViewController.swift"
