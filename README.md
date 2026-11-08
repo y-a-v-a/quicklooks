@@ -16,6 +16,10 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 | dotfiles, `Dockerfile`, `Brewfile` and other extensionless text, SQLite and archives | `public.data` | `DotfilePreviewer` | nothing |
 | `.conf` `.env` `.tf` `.lock` `.properties` `.service` … | `nl.vincentbruijn.config-text` | `DotfilePreviewer` | nothing |
 | `.go` `.rs` `.kt` `.dart` `.zig` `.lua` `.nix` `.vue` `.vm` `.jsp` `.snap` `.http` `.drl` … | `nl.vincentbruijn.source-text` | `DotfilePreviewer` | nothing |
+| `.py` | `public.python-script` | `DotfilePreviewer` | plain built-in preview |
+| `.sql` | Sequel Ace's `com.sequel-ace.sequel-ace.sql`, else `nl.vincentbruijn.source-text` | `DotfilePreviewer` | plain built-in preview, or nothing |
+| `.php` `.phtml` | `public.php-script` | `DotfilePreviewer` | plain built-in preview |
+| `.js` `.mjs` | `com.netscape.javascript-source` | `DotfilePreviewer` | plain built-in preview |
 | `.sqlite` `.sqlite3` `.db` `.db3` `.s3db` `.sl3` `.gpkg` `.mbtiles` | `nl.vincentbruijn.sqlite` | `SQLitePreviewer` | nothing |
 | `.plist` `.entitlements` `.xcprivacy` `.stringsdict` | `com.apple.property-list` and its Xcode subtypes | `PlistPreviewer` | plain built-in preview |
 | `.xml` | `public.xml` | `XMLPreviewer` | plain built-in preview |
@@ -26,6 +30,8 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 | `.impex` | `nl.vincentbruijn.impex` | `ImpexPreviewer` | nothing |
 | `.log` | `com.apple.log` | `LogPreviewer` | plain built-in preview |
 | `.woff2` `.woff` | `nl.vincentbruijn.woff2`, `nl.vincentbruijn.woff` | `FontPreviewer` | nothing |
+| `.md` `.markdown` | `net.daringfireball.markdown` | `MarkdownPreviewer` | plain built-in preview |
+| folders | `public.folder` | `FolderPreviewer` | icon only |
 
 Requires macOS 13 or later and Xcode's command line tools for `swiftc`.
 Developed and verified on macOS 26.5.
@@ -136,6 +142,8 @@ No Xcode project. An app extension is an `Info.plist` plus a binary, and
   Contents/PlugIns/ImpexPreviewer.appex  claims nl.vincentbruijn.impex
   Contents/PlugIns/LogPreviewer.appex    claims com.apple.log
   Contents/PlugIns/FontPreviewer.appex   claims nl.vincentbruijn.woff2, woff
+  Contents/PlugIns/MarkdownPreviewer.appex
+                                         claims net.daringfireball.markdown
 ```
 
 The host app exists only because an extension must ship inside an app, and a
@@ -158,6 +166,7 @@ plist wiring — and is ad-hoc signed with App Sandbox on. Nothing declares
 | `Sources/Formats/JSON/JSONValue.swift` | order-preserving JSON parser and pretty-printer |
 | `Sources/Formats/XML/XMLHighlighter.swift` | XML tokenizer shared by the plist, XML and ImpEx previewers |
 | `Sources/Formats/Dotfile/` | text sniffing, and filename → renderer |
+| `Sources/Formats/Folder/` | the folder list, built from views instead of text |
 | `install-dev-utis.sh` | superseded, see below |
 
 Every extension is compiled with the two `Core/` view files; the rest it lists
@@ -192,7 +201,10 @@ BuildKit heredocs (`RUN <<EOF`), whose bodies are literal, and the
 `# escape=` directive.
 
 **Dotfiles** reuse these by name — `.gitconfig` is INI — or get comments and
-strings highlighted.
+strings highlighted. Python, SQL, PHP and JavaScript also get their keywords.
+Minified JavaScript, with a line over 5,000 characters, gets line breaks after
+`;`, `{` and `}` first, like minified XML, with strings, comments and regex
+literals left whole; the header says so.
 
 **Property lists** are XML, so they are highlighted like markup, with the text
 inside `<key>`, `<string>`, `<integer>`, `<real>` and `<date>` coloured by
@@ -252,6 +264,40 @@ A variable font is shown at its default, then each named instance, up to 40,
 drawn in itself beside its axis values; a collection lists its fonts the same
 way. The copyright, designer and license strings come last. `.ttf` and `.otf`
 keep the built-in preview.
+
+**Markdown** is rendered rather than coloured: headings (H1 and H2 with a
+dotted rule), bold, italic, strikethrough, links, nested lists, task lists
+(`- [ ]` and `- [x]` as boxes), quotes, GitHub tables with their column
+alignment, and horizontal rules. Code, inline and fenced, is green monospace on
+a light-green background with rounded corners. A fenced block with a language
+tag (`swift`, `js`/`ts`, `python`, `go`, `rust`, `java`/`kotlin`, `c`/`cpp`,
+`ruby`, `sql`, `sh`, `json`, `yaml`, `css`, `html`, `dockerfile`, `lua`, …)
+gets its comments, strings, numbers and keywords coloured by the same shallow
+scanner as the dotfile previewer. Foundation's own CommonMark parser does the parsing,
+so there is no dependency. YAML front matter is shown at the top as a grey
+block, images as their alt text (a preview cannot load them), and raw HTML as
+dimmed source. The first 2 MB is shown. Light and dark mode each have their own
+colours. Other apps can ship a Markdown previewer too; if one of them wins,
+turn it off under System Settings → General → Login Items & Extensions →
+Quick Look.
+
+A **Preview | Source** switch in the top-right corner shows the Markdown
+source instead: line-numbered and coloured like the other previewers, with
+heading markers, emphasis, code spans, links, list and quote markers, tables,
+front matter and HTML picked out, and fenced code coloured by its language
+tag. Every file opens in Preview.
+
+**Folders** are shown like Finder's list view: icon, name and totals on top,
+Name, Date Modified, Size and Kind below, the path at the bottom. Each
+subfolder is shown open one level deep and no further; its size is the sum of
+the files directly in it, folders below that show "--". The folder itself is
+read before the panel opens, its subfolders in the background, so a folder
+whose files iCloud has offloaded still opens at once. A subfolder with more
+than 200 items lists the first 200. "Show hidden files" adds dotfiles, dimmed;
+`.DS_Store` never shows. Clicking a folder in the path copies its path,
+escaped for the shell (`My\ Files`), as dropping it on Terminal does.
+Buttons act on mouse down: Quick Look hands an extension a click's mouse up
+only with the next event, so a normal button stays pressed until then.
 
 **SQLite** shows the header metadata, then every table with its row count, and
 columns, indexes and 10 rows for the first 20. The database is opened

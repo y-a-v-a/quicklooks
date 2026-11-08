@@ -20,6 +20,12 @@ enum PlainTextRenderer {
         var variables = false
         var assignments = false
         var keywords: Set<String> = []
+        /// Letters that may sit right before a quote and still open a string:
+        /// Python's `f"…"`, `r'…'`, `rb"…"`.
+        var stringPrefixes: Set<Character> = []
+        /// Minified code (a line over 5,000 characters) gets line breaks
+        /// first, like the XML previewer does: see CodeReflow.
+        var reflowsMinified = false
 
         /// No colour at all, just the gutter. For text we know nothing about.
         static let plain = Syntax()
@@ -60,6 +66,8 @@ enum PlainTextRenderer {
 
         var text = String(decoding: data, as: UTF8.self)
         if truncated, let cut = text.lastIndex(of: "\n") { text = String(text[..<cut]) }
+        let minified = syntax.reflowsMinified && CodeReflow.isMinified(text)
+        if minified { text = CodeReflow.reflow(text, maxLines: maxLines) }
 
         var lines = text.components(separatedBy: "\n")
         if lines.last == "" { lines.removeLast() }
@@ -85,6 +93,7 @@ enum PlainTextRenderer {
         if let totalBytes {
             header.t("  \u{2022}  \(ByteCountFormatter.string(fromByteCount: Int64(totalBytes), countStyle: .file))", PreviewStyle.dim)
         }
+        if minified { header.t("  \u{2022}  minified, line breaks added", PreviewStyle.dim) }
         header.t(truncated ? "  \u{2022}  truncated\n\n" : "\n\n", PreviewStyle.dim)
 
         header.append(body)
@@ -95,7 +104,8 @@ enum PlainTextRenderer {
     }
 
     /// Colours one line and returns whether a block comment is still open.
-    private static func scanLine(_ c: [Character], _ syntax: Syntax, inBlock: Bool,
+    /// Also used by the Markdown previewer for fenced code blocks.
+    static func scanLine(_ c: [Character], _ syntax: Syntax, inBlock: Bool,
                                  into out: NSMutableAttributedString) -> Bool {
         var i = 0
         if inBlock, let block = syntax.blockComment {
@@ -155,7 +165,7 @@ enum PlainTextRenderer {
                 i = end
                 continue
             }
-            if syntax.quotes.contains(ch), opensString(c, at: i), let end = endOfQuoted(c, from: i) {
+            if syntax.quotes.contains(ch), opensString(c, at: i, syntax), let end = endOfQuoted(c, from: i) {
                 flush()
                 out.t(String(c[i..<end]), PreviewStyle.string)
                 i = end
@@ -205,9 +215,12 @@ enum PlainTextRenderer {
     }
 
     /// A quote opens a string only where a word could start, so the
-    /// apostrophe in `don't` in a comment-less `.gitignore` stays plain.
-    private static func opensString(_ c: [Character], at i: Int) -> Bool {
-        i == 0 || !(c[i - 1].isLetter || c[i - 1].isNumber)
+    /// apostrophe in `don't` in a comment-less `.gitignore` stays plain. Up to
+    /// two of the syntax's string prefixes may come first, as in `rb"…"`.
+    private static func opensString(_ c: [Character], at i: Int, _ syntax: Syntax) -> Bool {
+        var start = i
+        while start > 0, i - start < 2, syntax.stringPrefixes.contains(c[start - 1]) { start -= 1 }
+        return start == 0 || !(c[start - 1].isLetter || c[start - 1].isNumber)
     }
 
     /// Index just past the closing quote, or nil if the line never closes it —
