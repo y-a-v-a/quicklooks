@@ -95,7 +95,8 @@ enum PlainTextRenderer {
     }
 
     /// Colours one line and returns whether a block comment is still open.
-    private static func scanLine(_ c: [Character], _ syntax: Syntax, inBlock: Bool,
+    /// Also used by the Markdown previewer for fenced code blocks.
+    static func scanLine(_ c: [Character], _ syntax: Syntax, inBlock: Bool,
                                  into out: NSMutableAttributedString) -> Bool {
         var i = 0
         if inBlock, let block = syntax.blockComment {
