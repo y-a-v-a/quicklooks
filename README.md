@@ -71,6 +71,12 @@ mdls -name kMDItemContentTypeTree some.yaml   # public.text, no public.plain-tex
 
 So the type resolves, nothing claims it, and you get an empty preview pane.
 
+Not every Mac declares the INI and TOML types, though: macOS 26.6.2 has
+neither, and `.ini`, `.toml`, `.cfg` and `.config` then resolve to `dyn.*`
+types that no previewer can claim. So the host app imports `com.microsoft.ini`
+and `public.toml` itself. Where something declares them, the import is ignored
+(see below); where nothing does, it fills the gap.
+
 The obvious fix does not work. You can ship a bundle carrying
 `UTImportedTypeDeclarations` to restate the conformance, but a **declared** type
 beats an **imported** one, so the system's version wins and the import is

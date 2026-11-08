@@ -187,7 +187,10 @@ swiftc \
   "$SRC/App/DevQuickLookApp.swift"
 
 # An extension can only claim a type something on the system declares.
-# public.yaml is declared by macOS itself (CoreTypes.bundle), so only JSONL,
+# public.yaml is declared by macOS itself (CoreTypes.bundle). The INI and TOML
+# types are not declared on every Mac (macOS 26.6.2 has neither), so they are
+# imported below: an import is ignored wherever something declares the type,
+# and fills the gap where nothing does. Apart from those, only JSONL,
 # JSONC, JSON5, SQLite, *.Dockerfile, ImpEx, .ear, the XML dialects, WOFF and
 # WOFF2, and the dyn.* extensions need a
 # declaration here. The web fonts conform to public.data, not public.font:
@@ -280,6 +283,46 @@ cat > "$APP/Contents/Info.plist" <<PLIST
                 <key>public.mime-type</key>
                 <array>
                     <string>application/json5</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>com.microsoft.ini</string>
+            <key>UTTypeDescription</key>
+            <string>INI Configuration File</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.plain-text</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>ini</string>
+                </array>
+            </dict>
+        </dict>
+        <dict>
+            <key>UTTypeIdentifier</key>
+            <string>public.toml</string>
+            <key>UTTypeDescription</key>
+            <string>TOML Document</string>
+            <key>UTTypeConformsTo</key>
+            <array>
+                <string>public.plain-text</string>
+            </array>
+            <key>UTTypeTagSpecification</key>
+            <dict>
+                <key>public.filename-extension</key>
+                <array>
+                    <string>toml</string>
+                    <string>cfg</string>
+                    <string>config</string>
+                </array>
+                <key>public.mime-type</key>
+                <array>
+                    <string>application/toml</string>
                 </array>
             </dict>
         </dict>
