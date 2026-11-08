@@ -30,6 +30,7 @@
 #   FontPreviewer         nl.vincentbruijn.woff2,              .woff2 .woff
 #                         nl.vincentbruijn.woff
 #   MarkdownPreviewer     net.daringfireball.markdown          .md .markdown
+#   FolderPreviewer       public.folder                        folders
 #
 # No Xcode project: an app extension is a bundle with an Info.plist and a
 # binary, and swiftc produces both. The only non-obvious part is the entry
@@ -68,6 +69,7 @@ EXTENSIONS=(
   "ClassFilePreviewer:classfile:com.sun.java-class:Core/ByteReader.swift Formats/ClassFile/ClassFileRenderer.swift Formats/ClassFile/ClassFilePreviewViewController.swift"
   "LogPreviewer:log:com.apple.log:Core/ByteReader.swift Formats/Log/LogRenderer.swift Formats/Log/LogPreviewViewController.swift"
   "FontPreviewer:font:nl.vincentbruijn.woff2,nl.vincentbruijn.woff:Core/ByteReader.swift Formats/Font/FontRenderer.swift Formats/Font/FontPreviewViewController.swift"
+  "FolderPreviewer:folder:public.folder:Formats/Folder/FolderListing.swift Formats/Folder/FolderTable.swift Formats/Folder/FolderPathBar.swift Formats/Folder/FolderPreviewViewController.swift"
   "MarkdownPreviewer:markdown:net.daringfireball.markdown:Core/ByteReader.swift Formats/Dotfile/PlainTextRenderer.swift Formats/Dotfile/Languages.swift Formats/Dotfile/CodeReflow.swift Formats/Markdown/MarkdownStyle.swift Formats/Markdown/MarkdownCode.swift Formats/Markdown/MarkdownRenderer.swift Formats/Markdown/MarkdownSourceRenderer.swift Formats/Markdown/MarkdownPreviewViewController.swift"
 )
 SHARED="Core/PreviewStyle.swift Core/TextPreviewController.swift"

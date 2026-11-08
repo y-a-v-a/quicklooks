@@ -31,6 +31,7 @@ renders plain, syntax coloured, installed to `~/Applications` — no sudo, no
 | `.log` | `com.apple.log` | `LogPreviewer` | plain built-in preview |
 | `.woff2` `.woff` | `nl.vincentbruijn.woff2`, `nl.vincentbruijn.woff` | `FontPreviewer` | nothing |
 | `.md` `.markdown` | `net.daringfireball.markdown` | `MarkdownPreviewer` | plain built-in preview |
+| folders | `public.folder` | `FolderPreviewer` | icon only |
 
 Requires macOS 13 or later and Xcode's command line tools for `swiftc`.
 Developed and verified on macOS 26.5.
@@ -165,6 +166,7 @@ plist wiring — and is ad-hoc signed with App Sandbox on. Nothing declares
 | `Sources/Formats/JSON/JSONValue.swift` | order-preserving JSON parser and pretty-printer |
 | `Sources/Formats/XML/XMLHighlighter.swift` | XML tokenizer shared by the plist, XML and ImpEx previewers |
 | `Sources/Formats/Dotfile/` | text sniffing, and filename → renderer |
+| `Sources/Formats/Folder/` | the folder list, built from views instead of text |
 | `install-dev-utis.sh` | superseded, see below |
 
 Every extension is compiled with the two `Core/` view files; the rest it lists
@@ -284,6 +286,18 @@ source instead: line-numbered and coloured like the other previewers, with
 heading markers, emphasis, code spans, links, list and quote markers, tables,
 front matter and HTML picked out, and fenced code coloured by its language
 tag. Every file opens in Preview.
+
+**Folders** are shown like Finder's list view: icon, name and totals on top,
+Name, Date Modified, Size and Kind below, the path at the bottom. Each
+subfolder is shown open one level deep and no further; its size is the sum of
+the files directly in it, folders below that show "--". The folder itself is
+read before the panel opens, its subfolders in the background, so a folder
+whose files iCloud has offloaded still opens at once. A subfolder with more
+than 200 items lists the first 200. "Show hidden files" adds dotfiles, dimmed;
+`.DS_Store` never shows. Clicking a folder in the path copies its path,
+escaped for the shell (`My\ Files`), as dropping it on Terminal does.
+Buttons act on mouse down: Quick Look hands an extension a click's mouse up
+only with the next event, so a normal button stays pressed until then.
 
 **SQLite** shows the header metadata, then every table with its row count, and
 columns, indexes and 10 rows for the first 20. The database is opened
