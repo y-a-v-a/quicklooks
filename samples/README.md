@@ -31,3 +31,5 @@ mentions `ERRORS` after `INFO` (it counts as info), and a service-wrapper line.
 `sample.log.gz` are small archives of the other samples. `sample.vm`,
 `sample.jsp`, `sample.http`, `sample.drl` and `sample.snap` check that `//` in a
 URL is not a comment, and that each language's own comment syntax is.
+`sample.config` is a .NET `web.config`: XML under an extension typed as TOML,
+so it must get the XML preview, not INI colours.
